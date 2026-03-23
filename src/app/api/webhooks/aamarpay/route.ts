@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyWebhookSignature } from '@/lib/api/aamarPay'
+import { sendPaymentReceivedEmail } from '@/lib/email'
 
 interface AamarPayWebhookPayload {
   status: string
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      await db.transaction.create({
+      const transaction = await db.transaction.create({
         data: {
           paymentLinkId: paymentLink.id,
           userId: paymentLink.userId,
@@ -89,6 +90,19 @@ export async function POST(request: NextRequest) {
             gateway: gatewayFee
           })
         }
+      })
+
+      // Send email notification
+      await sendPaymentReceivedEmail({
+        to: paymentLink.user.email,
+        freelancerName: paymentLink.user.name || 'Freelancer',
+        clientName: paymentLink.customerName || undefined,
+        amount,
+        description: paymentLink.description,
+        netAmount,
+        platformFee
+      }).catch((err) => {
+        console.error('Failed to send payment email:', err)
       })
 
       await db.auditLog.create({
