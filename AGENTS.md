@@ -92,5 +92,14 @@ Each phase must pass evaluation before proceeding:
 ## Shared Resources
 
 - **AGENT.md** — Project overview and shared knowledge
-- **docs/skills/ui-ux-pro-max-summary.md** — UI/UX guidelines
 - **plan.txt** — Business requirements
+
+## Skills Per Agent
+
+| Agent | Skills |
+|-------|--------|
+| **business-planner** | business context in AGENT.md, plan.txt |
+| **software-architect** | [api-design](docs/skills/api-design.md) |
+| **software-engineer** | [ui-ux-pro-max](docs/skills/ui-ux-pro-max/SKILL.md), [tailwind-design-system](docs/skills/tailwind-design-system.md) |
+| **evaluator** | [code-review-quality](docs/skills/code-review-quality.md), [ui-ux-pro-max](docs/skills/ui-ux-pro-max/SKILL.md) |
+| **fixer** | [debugging-troubleshooting](docs/skills/debugging-troubleshooting.md) |
