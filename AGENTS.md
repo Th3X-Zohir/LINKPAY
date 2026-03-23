@@ -12,6 +12,7 @@ LinkPay BD uses a **multi-agent workflow** where specialized agents handle diffe
 
 | Agent | File | Purpose |
 |-------|------|---------|
+| **Business Planner** | [agents/business-planner.md](agents/business-planner.md) | Business requirements, user stories, feature specs |
 | **Software Architect** | [agents/software-architect.md](agents/software-architect.md) | System design, architecture decisions, tech stack |
 | **Software Engineer** | [agents/software-engineer.md](agents/software-engineer.md) | Feature implementation, code writing |
 | **Evaluator** | [agents/evaluator.md](agents/evaluator.md) | Code review, quality assurance, testing |
@@ -21,19 +22,24 @@ LinkPay BD uses a **multi-agent workflow** where specialized agents handle diffe
 
 ## Workflow Patterns
 
-### Pattern 1: Feature Development
+### Pattern 1: Feature Development (Full)
 ```
-Software Architect → Software Engineer → Evaluator → Fixer (if needed)
+Business Planner → Software Architect → Software Engineer → Evaluator → Fixer (if needed)
 ```
 
-### Pattern 2: Bug Fix
+### Pattern 2: Quick Feature (Skip Planner)
+```
+Software Architect → Software Engineer → Evaluator
+```
+
+### Pattern 3: Bug Fix
 ```
 Evaluator (identifies) → Fixer (resolves) → Evaluator (verifies)
 ```
 
-### Pattern 3: Architecture Decision
+### Pattern 4: Business Requirement Only
 ```
-Software Architect (designs) → Evaluator (reviews) → Software Engineer (implements)
+Business Planner (creates spec) → Software Architect (designs)
 ```
 
 ---
@@ -44,6 +50,7 @@ Use the `runSubagent` tool with the agent name:
 
 | Task | Invoke Agent |
 |------|--------------|
+| Create user stories from business plan | `business-planner` |
 | Design new feature | `software-architect` |
 | Implement payment link | `software-engineer` |
 | Review PR | `evaluator` |
