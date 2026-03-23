@@ -30,12 +30,23 @@ export default async function AnalyticsPage() {
     })
   ])
 
-  const totalEarnings = recentTransactions.reduce((sum, t) => sum + t.netAmount, 0)
-  const totalAmount = recentTransactions.reduce((sum, t) => sum + t.amount, 0)
-  const totalFees = recentTransactions.reduce((sum, t) => sum + t.platformFee + t.gatewayFee, 0)
+  type TxSummary = {
+    id: string
+    amount: number
+    netAmount: number
+    platformFee: number
+    gatewayFee: number
+    createdAt: Date
+  }
+
+  const typedRecentTransactions = recentTransactions as TxSummary[]
+
+  const totalEarnings = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.netAmount, 0)
+  const totalAmount = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.amount, 0)
+  const totalFees = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.platformFee + t.gatewayFee, 0)
 
   const dailyEarnings: Record<string, number> = {}
-  recentTransactions.forEach(t => {
+  typedRecentTransactions.forEach((t: TxSummary) => {
     const date = new Date(t.createdAt).toISOString().split('T')[0]
     dailyEarnings[date] = (dailyEarnings[date] || 0) + t.netAmount
   })
@@ -116,13 +127,13 @@ export default async function AnalyticsPage() {
             <div className="flex justify-between items-center">
               <span className="text-slate-600">Platform Fee (0.75%)</span>
               <span className="font-semibold text-red-600">
-                -{formatCurrency(recentTransactions.reduce((sum, t) => sum + t.platformFee, 0))}
+                -{formatCurrency(typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.platformFee, 0))}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-600">Gateway Fee (2.55%)</span>
               <span className="font-semibold text-red-600">
-                -{formatCurrency(recentTransactions.reduce((sum, t) => sum + t.gatewayFee, 0))}
+                -{formatCurrency(typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.gatewayFee, 0))}
               </span>
             </div>
             <div className="border-t pt-4 flex justify-between items-center">
@@ -175,14 +186,14 @@ export default async function AnalyticsPage() {
           <CardTitle>Top Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          {recentTransactions.length === 0 ? (
+          {typedRecentTransactions.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No transactions yet</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {recentTransactions.slice(0, 5).map((tx) => (
+              {typedRecentTransactions.slice(0, 5).map((tx: TxSummary) => (
                 <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
                     <p className="font-medium">{formatCurrency(tx.amount)}</p>
