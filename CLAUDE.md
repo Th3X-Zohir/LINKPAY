@@ -44,7 +44,16 @@ LinkPay BD is a **mobile-first payment link platform** for Bangladeshi freelance
 | Prettier | Code formatting |
 | Vitest | Unit testing |
 | Playwright | E2E testing |
-| Turborepo | Monorepo (if needed) |
+| Docker | Containerization |
+| Docker Compose | Multi-service orchestration |
+
+### Infrastructure
+- **Deployment:** Self-hosted Docker on bare metal (NOT Vercel)
+- **Web-based:** 100% responsive PWA (mobile-friendly, ready for future native app)
+- **Reverse Proxy:** Caddy (auto SSL) or Nginx
+- **Database:** PostgreSQL 16 (Docker)
+- **Cache/Queue:** Redis 7 (Docker)
+- **Background Jobs:** BullMQ (Docker worker)
 
 ---
 
@@ -392,17 +401,23 @@ How was this tested?
 ### Commit Attribution
 - **ALWAYS** use the following author for all commits:
   - Name: `Th3X-Zohir`
-  - Email: `zohirrayhan@users.noreply.github.com`
-- Set via `git config user.name "Th3X-Zohir"` and `git config user.email "zohirrayhan@users.noreply.github.com"`
+  - Email: `zohirrayhanweb@gmail.com`
+- Set via `git config user.name "Th3X-Zohir"` and `git config user.email "zohirrayhanweb@gmail.com"`
 - NEVER use "Claude Opus" or any other author name in commits
+
+### Before Any Git Push - GET APPROVAL FIRST
+- **MUST** ask user for approval before running `git push`
+- State what changes will be pushed
+- Wait for user confirmation
+- Do NOT push without explicit user approval
 
 ### Before Any Git Push
 1. Verify `git config user.name` returns `Th3X-Zohir`
-2. Verify `git config user.email` returns `zohirrayhan@users.noreply.github.com`
+2. Verify `git config user.email` returns `zohirrayhanweb@gmail.com`
 3. If not set, run:
    ```bash
    git config user.name "Th3X-Zohir"
-   git config user.email "zohirrayhan@users.noreply.github.com"
+   git config user.email "zohirrayhanweb@gmail.com"
    ```
 
 ### Branch Convention

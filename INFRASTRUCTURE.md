@@ -1,104 +1,122 @@
 # LinkPay BD - Complete Infrastructure Specification
 
+> Self-hosted Docker infrastructure on bare metal
+> Web-based (100% responsive, PWA-ready for future mobile app)
+> Last updated: March 2026
+
+---
+
 ## Table of Contents
 1. [System Architecture](#1-system-architecture)
-2. [Database Schema (Prisma)](#2-database-schema-prisma)
-3. [API Design](#3-api-design)
-4. [Directory Structure](#4-directory-structure)
-5. [Environment Variables](#5-environment-variables)
-6. [Security Considerations](#6-security-considerations)
-7. [Deployment Strategy](#7-deployment-strategy-vercel--hostinger)
+2. [Docker Setup](#2-docker-setup)
+3. [Database Schema (Prisma)](#3-database-schema-prisma)
+4. [API Design](#4-api-design)
+5. [Directory Structure](#5-directory-structure)
+6. [Environment Variables](#6-environment-variables)
+7. [Security Considerations](#7-security-considerations)
 
 ---
 
 ## 1. System Architecture
 
-### 1.1 High-Level Architecture
+### 1.1 High-Level Architecture (Self-Hosted)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              CLIENT LAYER                                    │
-│  ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐    │
-│  │   Mobile Web    │     │   Desktop Web    │     │   PWA (Installable) │    │
-│  │   (375px first) │     │   (Responsive)   │     │   (Service Worker)  │    │
-│  └────────┬────────┘     └────────┬─────────┘     └──────────┬──────────┘    │
-└───────────┼─────────────────────────┼───────────────────────────┼──────────────┘
+│  ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐ │
+│  │   Mobile Web    │     │   Desktop Web    │     │   PWA Ready         │ │
+│  │   (375px first) │     │   (Responsive)   │     │   (Future Mobile)   │ │
+│  └────────┬────────┘     └────────┬─────────┘     └──────────┬──────────┘ │
+└───────────┼─────────────────────────┼───────────────────────────┼────────────┘
             │                         │                            │
             └─────────────────────────┼────────────────────────────┘
                                       │ HTTPS
 ┌─────────────────────────────────────┴───────────────────────────────────────┐
-│                              EDGE / CDN LAYER                                 │
-│  ┌─────────────────────┐              ┌─────────────────────────────────┐    │
-│  │   Vercel Edge       │              │   Vercel ISR / Static Cache    │    │
-│  │   Network           │              │   (Landing pages, assets)       │    │
-│  └─────────────────────┘              └─────────────────────────────────┘    │
+│                              LOAD BALANCER / CDN                             │
+│                         (Nginx with SSL Termination)                        │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
 ┌─────────────────────────────────────┴───────────────────────────────────────┐
-│                           NEXT.JS APPLICATION LAYER                          │
-│                              (Vercel Serverless)                             │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │                      APP ROUTER (Next.js 15)                           │ │
-│  │  ┌───────────────┐ ┌───────────────┐ ┌───────────────────────────┐  │ │
-│  │  │  (auth)/      │ │  (dashboard)/  │ │  (marketing)/             │  │ │
-│  │  │  - login      │ │  - overview    │ │  - landing                │  │ │
-│  │  │  - register   │ │  - links       │ │  - pricing                │  │ │
-│  │  │  - forgot-pw   │ │  - transactions│ │  - about                  │  │ │
-│  │  └───────────────┘ │  - payouts     │ └───────────────────────────┘  │ │
-│  │                    │  - settings    │                                 │ │
-│  │                    │  - analytics    │                                 │ │
-│  │                    └───────────────┘                                  │ │
-│  │  ┌─────────────────────────────────────────────────────────────────┐  │ │
-│  │  │                    API ROUTES                                    │  │ │
-│  │  │  /api/auth/*  /api/payment-links/*  /api/transactions/*        │  │ │
-│  │  │  /api/webhooks/*  /api/users/*  /api/payouts/*                │  │ │
-│  │  └─────────────────────────────────────────────────────────────────┘  │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-│                                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │  Server      │  │  Server       │  │  API Route   │  │  Webhook     │    │
-│  │  Components   │  │  Actions     │  │  Handlers    │  │  Handlers    │    │
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │
-            ┌─────────────────────────┼──────────────────────────────┐
-            │                         │                              │
-┌───────────┴───────────┐ ┌──────────┴──────────┐ ┌────────────────┴────────┐
-│   DATABASE CLUSTER    │ │   EXTERNAL SERVICES  │ │   CACHE / SESSIONS      │
-│   (Neon PostgreSQL)   │ │                      │ │   (Vercel KV / Upstash) │
-│   - Primary RW        │ │  ┌────────────────┐  │ │                         │
-│   - Read Replicas     │ │  │  aamarPay      │  │ │  - NextAuth sessions    │
-│   - Branching         │ │  │  Gateway API   │  │ │  - Rate limiting        │
-│   └───────────────────┘ │  └────────────────┘  │ │  - API caching          │
-│                         │  ┌────────────────┐  │ └─────────────────────────┘
-│                         │  │  bKash         │  │
-│                         │  │  Payout API    │  │
-│                         │  └────────────────┘  │
-│                         │  ┌────────────────┐  │
-│                         │  │  Email (Resend)│  │
-│                         │  │  SMS (Twilio)  │  │
-│                         │  └────────────────┘  │
-│                         │  ┌────────────────┐  │
-│                         │  │  File Storage  │  │
-│                         │  │  (Vercel Blob) │  │
-│                         │  └────────────────┘  │
-└─────────────────────────┴───────────────────────────────────────────────────┘
-                                      │
-┌─────────────────────────────────────┴───────────────────────────────────────┐
-│                         HOSTINGER (Bangladesh)                               │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │   VMS: 2 vCPU, 4GB RAM, 80GB SSD                                      │ │
-│  │   - Reverse Proxy (Nginx) for bKash webhook callbacks                 │ │
-│  │   - Background Job Runner (BullMQ + Redis)                           │ │
-│  │   - Cron Jobs for payout processing                                   │ │
-│  │   - Database backups (daily)                                           │ │
-│  │   - SSL certificates (Let's Encrypt)                                  │ │
-│  └─────────────────────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────────────────┘
+│                         DOCKER SWARM / SINGLE SERVER                        │
+│                           (Bare Metal - Your Server)                        │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                        NGINX REVERSE PROXY                             │  │
+│  │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────┐ │  │
+│  │   │ Frontend    │  │   API       │  │  Webhook    │  │ Static   │ │  │
+│  │   │ (Next.js)   │  │  (Node.js)  │  │  Handler    │  │ Files    │ │  │
+│  │   └─────────────┘  └─────────────┘  └─────────────┘  └──────────┘ │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │
+│  │ PostgreSQL  │  │   Redis     │  │  Worker     │  │   Caddy         │   │
+│  │  Database   │  │  (Cache/Q) │  │  (BullMQ)   │  │   (SSL/Reverse) │   │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Payment Flow Architecture
+### 1.2 Service Breakdown
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         SINGLE SERVER SERVICES                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  NGINX (Reverse Proxy + Load Balancer)                                      │
+│  ├── Port 80 (HTTP → HTTPS redirect)                                       │
+│  ├── Port 443 (SSL termination)                                            │
+│  ├── Rate limiting                                                         │
+│  └── WebSocket support for real-time                                       │
+│                                                                             │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  CADDY (Alternative Reverse Proxy - Easier SSL)                             │
+│  ├── Automatic HTTPS with Let's Encrypt                                    │
+│  ├── Docker integration                                                    │
+│  └── HTTP/3 support                                                        │
+│                                                                             │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  POSTGRESQL (Database)                                                     │
+│  ├── Port 5432                                                             │
+│  ├── Persistent volume                                                    │
+│  ├── Daily backups to local storage                                        │
+│  └── Connection pooling via PgBouncer                                       │
+│                                                                             │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  REDIS (Cache + Sessions + Queue)                                          │
+│  ├── Port 6379                                                            │
+│  ├── Persistent storage                                                    │
+│  └── Used by BullMQ for job queue                                          │
+│                                                                             │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  NEXT.JS APP (Frontend + API)                                              │
+│  ├── Containerized Next.js 15                                             │
+│  ├── Server Components                                                     │
+│  ├── API Routes                                                            │
+│  └── Server Actions                                                        │
+│                                                                             │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  WORKER (Background Jobs)                                                  │
+│  ├── BullMQ for job processing                                             │
+│  ├── Payout processing (daily at 9 AM BDT)                                │
+│  ├── Email queue                                                           │
+│  └── Webhook retry logic                                                   │
+│                                                                             │
+│  ────────────────────────────────────────────────────────────────────────  │
+│                                                                             │
+│  FILE STORAGE (Local / MinIO for S3-compatible)                            │
+│  ├── Document uploads                                                     │
+│  └── Future: S3-compatible storage                                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1.3 Payment Flow Architecture
 
 ```
 1. LINK CREATION
@@ -121,21 +139,396 @@
 4. WEBHOOK NOTIFICATION
    aamarPay → POST /api/webhooks/aamarpay
    - Verify HMAC signature
-   - Idempotency check
+   - Idempotency check (store event_id)
    - Update PaymentLink status: PENDING → PAID
    - Create Transaction record
-   - Trigger payout queue job
+   - Queue payout job in Redis/BullMQ
 
-5. PAYOUT PROCESSING (BullMQ on Hostinger)
+5. PAYOUT PROCESSING (Worker Container)
    Daily at 9:00 AM Bangladesh Time
    - Query all PAID transactions with PayoutStatus = PENDING
+   - Group by user
    - Call bKash Payout API
    - Update statuses
 ```
 
 ---
 
-## 2. Database Schema (Prisma)
+## 2. Docker Setup
+
+### 2.1 Docker Compose (Single Server)
+
+```yaml
+# docker-compose.yml
+version: '3.9'
+
+services:
+  # ============================================================
+  # REVERSE PROXY
+  # ============================================================
+  caddy:
+    image: caddy:3-alpine
+    container_name: linkpay-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./public:/var/www/public
+    networks:
+      - linkpay-network
+    depends_on:
+      - app
+
+  # ============================================================
+  # POSTGRESQL DATABASE
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: linkpay-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: linkpay
+      POSTGRES_USER: ${POSTGRES_USER:-linkpay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - linkpay-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkpay"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # REDIS (Cache + Sessions + Queue)
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: linkpay-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - linkpay-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # NEXT.JS APPLICATION
+  # ============================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: linkpay-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-linkpay}:${POSTGRES_PASSWORD}@postgres:5432/linkpay
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      NODE_ENV: production
+    volumes:
+      - app_data:/app/.next
+      - ./uploads:/app/uploads
+    networks:
+      - linkpay-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============================================================
+  # WORKER (Background Jobs)
+  # ============================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: linkpay-worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-linkpay}:${POSTGRES_PASSWORD}@postgres:5432/linkpay
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      NODE_ENV: production
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - linkpay-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ============================================================
+  # BACKUP SERVICE (Daily)
+  # ============================================================
+  backup:
+    image: postgres:16-alpine
+    container_name: linkpay-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: linkpay
+      POSTGRES_USER: ${POSTGRES_USER:-linkpay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_DIR: /backups
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh
+    networks:
+      - linkpay-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "while true; do sh /backup.sh; sleep 86400; done"]
+
+networks:
+  linkpay-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_data:
+```
+
+### 2.2 Caddyfile (Reverse Proxy Configuration)
+
+```caddy
+# Caddyfile
+
+# Production Domain
+linkpay.bd, www.linkpay.bd {
+    # Reverse proxy to Next.js app
+    reverse_proxy app:3000
+
+    # Static files
+    handle_path /uploads/* {
+        root * /var/www/public/uploads
+        file_server
+    }
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Logging
+    log {
+        output file /var/log/caddy/linkpay.log
+    }
+}
+
+# API Subdomain (optional)
+api.linkpay.bd {
+    reverse_proxy app:3000
+
+    # Stricter rate limiting for API
+    header {
+        X-Frame-Options "DENY"
+    }
+}
+
+# Webhook endpoints (Bangladesh IPs only - via nginx geo blocking)
+webhooks.linkpay.bd {
+    reverse_proxy app:3000
+
+    # IP restriction can be handled via nginx in front or iptables
+}
+
+# Local development
+localhost {
+    reverse_proxy app:3000
+    log {
+        output file /var/log/caddy/local.log
+    }
+}
+```
+
+### 2.3 Dockerfile (Next.js App)
+
+```dockerfile
+# Dockerfile
+FROM node:20-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build the application
+RUN npm run build
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
+```
+
+### 2.4 Dockerfile.worker (Background Jobs)
+
+```dockerfile
+# Dockerfile.worker
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci --only=production
+
+# Copy prisma schema
+COPY prisma ./prisma
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy worker code
+COPY worker ./worker
+
+# Run worker
+CMD ["node", "worker/index.js"]
+```
+
+### 2.5 Nginx Configuration (Alternative - If Not Using Caddy)
+
+```nginx
+# /etc/nginx/conf.d/linkpay.conf
+
+upstream linkpay_app {
+    least_conn;
+    server app:3000 max_fails=3 fail_timeout=30s;
+}
+
+server {
+    listen 80;
+    server_name linkpay.bd www.linkpay.bd;
+
+    # Redirect to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name linkpay.bd www.linkpay.bd;
+
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/linkpay.bd/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/linkpay.bd/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Gzip
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+
+    # Client max body size for file uploads
+    client_max_body_size 10M;
+
+    # Rate limiting zones
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=auth_limit:5r/s;
+
+    # Location rules
+    location / {
+        limit_req zone=api_limit burst=20 nodelay;
+
+        proxy_pass http://linkpay_app;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    location /api/auth/login {
+        limit_req zone=auth_limit burst=5 nodelay;
+
+        proxy_pass http://linkpay_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /uploads/ {
+        alias /var/www/public/uploads/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+---
+
+## 3. Database Schema (Prisma)
 
 ```prisma
 generator client {
@@ -459,9 +852,9 @@ model AuditLog {
 
 ---
 
-## 3. API Design
+## 4. API Design
 
-### 3.1 API Response Format
+### 4.1 API Response Format
 
 ```typescript
 interface ApiResponse<T> {
@@ -483,254 +876,264 @@ interface ApiError {
 }
 ```
 
-### 3.2 Authentication Endpoints
+### 4.2 Endpoints
 
 ```
+# Authentication
 POST   /api/auth/register
 POST   /api/auth/login
 POST   /api/auth/logout
 POST   /api/auth/forgot-password
 POST   /api/auth/reset-password
 GET    /api/auth/session
-```
 
-### 3.3 Payment Link Endpoints
+# Payment Links
+GET    /api/payment-links
+POST   /api/payment-links
+GET    /api/payment-links/:id
+PUT    /api/payment-links/:id
+DELETE /api/payment-links/:id
+POST   /api/payment-links/:id/share
 
-```
-GET    /api/payment-links              # List user's payment links
-POST   /api/payment-links              # Create new payment link
-GET    /api/payment-links/:id          # Get single payment link
-PUT    /api/payment-links/:id          # Update payment link
-DELETE /api/payment-links/:id          # Delete/cancel payment link
-POST   /api/payment-links/:id/share   # Get share options
-```
+# Public Payment Page
+GET    /pay/:shareUrl
+POST   /api/public/pay/:shareUrl
 
-### 3.4 Public Payment Page
+# Transactions
+GET    /api/transactions
+GET    /api/transactions/:id
 
-```
-GET  /pay/:shareUrl                   # Public payment page (no auth)
-POST /api/public/pay/:shareUrl        # Process payment
-```
+# Payouts
+GET    /api/payouts
+GET    /api/payouts/balance
+POST   /api/payouts/request
 
-### 3.5 Transaction Endpoints
-
-```
-GET    /api/transactions               # List user's transactions
-GET    /api/transactions/:id           # Get single transaction
-```
-
-### 3.6 Payout Endpoints
-
-```
-GET  /api/payouts                     # List payout history
-GET  /api/payouts/balance             # Get available balance
-POST /api/payouts/request             # Request manual payout
-```
-
-### 3.7 Webhook Endpoints
-
-```
-POST /api/webhooks/aamarpay           # aamarPay notifications
-POST /api/webhooks/bkash              # bKash payout notifications
+# Webhooks
+POST   /api/webhooks/aamarpay
+POST   /api/webhooks/bkash
 ```
 
 ---
 
-## 4. Directory Structure
+## 5. Directory Structure
 
 ```
 linkpay-bd/
 ├── src/
 │   ├── app/
-│   │   ├── (auth)/                  # Auth routes
-│   │   ├── (dashboard)/             # Protected dashboard
-│   │   ├── (marketing)/             # Public pages
-│   │   ├── (public)/               # Public payment pages
-│   │   │   └── pay/[shareUrl]/     # Payment page
-│   │   ├── api/                     # API Routes
-│   │   │   ├── auth/
-│   │   │   ├── payment-links/
-│   │   │   ├── transactions/
-│   │   │   ├── webhooks/
-│   │   │   └── public/
-│   │   └── admin/                   # Admin panel
+│   │   ├── (auth)/
+│   │   ├── (dashboard)/
+│   │   ├── (marketing)/
+│   │   ├── (public)/
+│   │   │   └── pay/[shareUrl]/
+│   │   └── api/
 │   ├── components/
-│   │   ├── ui/                      # shadcn/ui components
-│   │   ├── forms/                   # Form components
-│   │   ├── payment/                 # Payment-specific
-│   │   ├── dashboard/               # Dashboard widgets
-│   │   └── layout/                  # Layout components
+│   │   ├── ui/
+│   │   ├── forms/
+│   │   ├── payment/
+│   │   ├── dashboard/
+│   │   └── layout/
 │   ├── lib/
-│   │   ├── db.ts                   # Prisma client
-│   │   ├── auth.ts                 # NextAuth config
-│   │   ├── api/                    # API clients
-│   │   │   ├── aamarpay.ts
-│   │   │   └── bkash.ts
+│   │   ├── db.ts
+│   │   ├── auth.ts
+│   │   ├── api/
 │   │   ├── utils.ts
-│   │   └── validators.ts           # Zod schemas
-│   ├── hooks/                      # Custom hooks
-│   ├── types/                     # TypeScript types
-│   ├── actions/                    # Server Actions
-│   └── stores/                     # Zustand stores
+│   │   └── validators.ts
+│   ├── hooks/
+│   ├── types/
+│   ├── actions/
+│   └── stores/
+├── worker/
+│   ├── index.ts
+│   ├── jobs/
+│   │   ├── payout.ts
+│   │   └── email.ts
+│   └── processors/
 ├── prisma/
-│   ├── schema.prisma
-│   └── migrations/
+│   └── schema.prisma
+├── docker/
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   ├── Dockerfile.worker
+│   ├── Caddyfile
+│   └── nginx.conf
+├── scripts/
+│   └── backup.sh
 ├── public/
-│   ├── icons/
-│   └── images/
+├── uploads/
 ├── tests/
-│   ├── unit/
-│   └── e2e/
 └── docs/
 ```
 
 ---
 
-## 5. Environment Variables
+## 6. Environment Variables
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:password@host:5432/linkpay
+# ============================================================
+# DATABASE
+# ============================================================
+POSTGRES_USER=linkpay
+POSTGRES_PASSWORD=your_secure_password_here
+DATABASE_URL=postgresql://linkpay:your_secure_password_here@postgres:5432/linkpay
 
-# Auth (NextAuth v5)
+# ============================================================
+# REDIS
+# ============================================================
+REDIS_PASSWORD=your_redis_password_here
+REDIS_URL=redis://:your_redis_password_here@redis:6379
+
+# ============================================================
+# AUTHENTICATION
+# ============================================================
 NEXTAUTH_URL=https://linkpay.bd
-NEXTAUTH_SECRET=
+NEXTAUTH_SECRET=your_nextauth_secret_here
+# Generate with: openssl rand -base64 32
 
-# aamarPay
+# ============================================================
+# PAYMENT GATEWAY (aamarPay)
+# ============================================================
 AAMARPAY_STORE_ID=
 AAMARPAY_KEY=
 AAMARPAY_URL=https://www.aamarpay.com/api/v2
+AAMARPAY_SANDBOX_URL=https://sandbox.aamarpay.com/api/v2
 AAMARPAY_WEBHOOK_SECRET=
 
-# bKash Payout
+# ============================================================
+# PAYOUT (bKash)
+# ============================================================
 BKASH_USERNAME=
 BKASH_PASSWORD=
 BKASH_APP_KEY=
 BKASH_APP_SECRET=
 BKASH_BASE_URL=https://dev.kendolitec.com
 
-# Email (Resend)
+# ============================================================
+# EMAIL (Resend)
+# ============================================================
 RESEND_API_KEY=
 EMAIL_FROM=noreply@linkpay.bd
 
-# SMS (Twilio)
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_PHONE_NUMBER=
-
-# File Storage (Vercel Blob)
-BLOB_READ_WRITE_TOKEN=
-
-# Cache & Sessions
-KV_REST_API_URL=
-KV_REST_API_TOKEN=
-
-# Monitoring
-SENTRY_DSN=
-POSTHOG_API_KEY=
-
-# Application
+# ============================================================
+# APPLICATION
+# ============================================================
 NEXT_PUBLIC_APP_URL=https://linkpay.bd
 PLATFORM_FEE_PERCENT=0.75
 DEFAULT_LINK_EXPIRY_DAYS=7
+CRON_TIMEZONE=Asia/Dhaka
 ```
 
 ---
 
-## 6. Security Considerations
+## 7. Security Considerations
 
-### Authentication & Authorization
-- Session Strategy: JWT with database session
-- Password: min 8 chars, 1 uppercase, 1 number, 1 special
-- Rate Limiting: 5 login attempts per 15 min per IP
+### 7.1 Server Security
 
-### API Security
-- Rate Limiting with Upstash Redis
-- CORS: Allow only linkpay.bd origins
-- Security Headers: HSTS, X-Frame-Options, etc.
-- Input Validation: Zod schemas on all inputs
+```bash
+# Firewall (UFW)
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow ssh
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
 
-### Payment Security
-- Webhook Signature: HMAC-SHA256 verification
-- Idempotency: Store event_id to prevent double-processing
-- Transaction Atomicity: Prisma transactions for multi-step updates
-- Amount Validation: Server-side validation against stored amount
+# Fail2ban for SSH protection
+apt install fail2ban
 
-### Data Protection
-- Sensitive data (NID, bank accounts): AES-256-GCM encryption
-- PII Minimization: Public pages show only name + initial
-- Audit Logging: All sensitive operations logged
+# Automatic security updates
+apt install unattended-upgrades
+dpkg-reconfigure -plow unattended-upgrades
+
+# Docker security
+# Ensure Docker daemon runs as non-root
+# Use Docker's built-in seccomp profile
+# Enable AppArmor/SELinux
+```
+
+### 7.2 SSL/TLS
+
+```bash
+# Using Let's Encrypt with Caddy (automatic)
+# Caddy handles this automatically
+
+# Or with Certbot (nginx)
+certbot --nginx -d linkpay.bd -d www.linkpay.bd
+```
+
+### 7.3 Backup Strategy
+
+```bash
+# Daily backup script (scripts/backup.sh)
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR=/backups
+POSTGRES_HOST=postgres
+POSTGRES_DB=linkpay
+POSTGRES_USER=linkpay
+
+pg_dump -h $POSTGRES_HOST -U $POSTGRES_USER $POSTGRES_DB | gzip > $BACKUP_DIR/linkpay_$DATE.sql.gz
+
+# Keep last 30 days
+find $BACKUP_DIR -name "linkpay_*.sql.gz" -mtime +30 -delete
+
+# Upload to remote storage (optional - S3/rclone)
+rclone copy $BACKUP_DIR remote:linkpay-backups/
+```
+
+### 7.4 Docker Security Best Practices
+
+```yaml
+# Use specific version tags, not 'latest'
+image: postgres:16-alpine
+
+# Run as non-root user
+USER nextjs
+
+# Read-only root filesystem (where possible)
+read_only: true
+
+# Limit resources
+deploy:
+  resources:
+    limits:
+      cpus: '1'
+      memory: 2G
+
+# Scan images for vulnerabilities
+docker scan linkpay-app
+```
 
 ---
 
-## 7. Deployment Strategy (Vercel + Hostinger)
+## 8. Deployment Checklist
 
-### Infrastructure Overview
+### 8.1 Server Setup
 
-```
-VERCEL (Primary Platform)
-├── Edge Network (CDN, SSL, DDoS)
-├── Serverless Functions (API Routes, ISR)
-├── Blob Storage (documents)
-├── KV (Sessions, Rate Limiting)
-└── Cron Jobs
+- [ ] Install Ubuntu 22.04 LTS on bare metal
+- [ ] Configure network (static IP)
+- [ ] Set up DNS A record for linkpay.bd
+- [ ] Install Docker & Docker Compose
+- [ ] Configure firewall (UFW)
+- [ ] Set up Fail2Ban
+- [ ] Create Docker network
 
-HOSTINGER (Bangladesh-Optimized)
-├── Nginx Reverse Proxy (webhook forwarding)
-├── BullMQ Worker (background jobs)
-├── Redis (job queue)
-└── Database Backups
+### 8.2 Application Deployment
 
-NEON (Database)
-├── Primary (Singapore)
-├── Read Replicas
-└── Branching (preview deployments)
-```
+- [ ] Clone repository to server
+- [ ] Copy .env.production file
+- [ ] Run `docker-compose build`
+- [ ] Run `docker-compose up -d`
+- [ ] Check logs: `docker-compose logs -f`
+- [ ] Verify SSL certificate auto-issued
+- [ ] Test payment link creation
 
-### Deployment Pipeline
+### 8.3 Monitoring
 
-```
-Push → GitHub Actions
-  ├── Install & Lint
-  ├── Type Check
-  ├── Test
-  ├── Preview Deploy (PR)
-  └── Production Deploy (main)
-```
-
-### Critical Implementation Notes
-
-1. **Webhook Handling**: Hostinger receives callbacks from aamarPay/bKash (Bangladesh IPs), forwards to Vercel
-2. **Payout Processing**: BullMQ on Hostinger runs daily at 9 AM BDT
-3. **Database**: Neon PostgreSQL with daily backups at 2 AM BDT
-4. **RTO**: 4 hours | **RPO**: 24 hours
-
----
-
-## Implementation Phases
-
-### Phase 1: Foundation (Weeks 1-2)
-1. Project setup: Next.js 15, Tailwind 4, shadcn/ui v2
-2. Database schema: Prisma models
-3. Authentication: NextAuth v5
-4. Basic dashboard layout
-
-### Phase 2: Core MVP (Weeks 3-4)
-1. Payment link creation
-2. Public payment page
-3. aamarPay integration (sandbox)
-4. Webhook handler
-
-### Phase 3: Payouts (Weeks 5-6)
-1. bKash payout API integration
-2. BullMQ job queue
-3. Payout dashboard
-4. Email notifications
-
-### Phase 4: Polish (Weeks 7-8)
-1. Analytics dashboard
-2. Mobile responsiveness
-3. Beta testing with 100 users
+- [ ] Set up Uptime Kuma (self-hosted monitoring)
+- [ ] Configure log rotation
+- [ ] Set up backup schedule
+- [ ] Test backup restoration
 
 ---
 
