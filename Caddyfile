@@ -1,0 +1,42 @@
+{
+  admin off
+  auto_https off
+}
+
+:80 {
+  root * /app
+  encode gzip
+
+  # Security headers
+  header {
+    X-Frame-Options "SAMEORIGIN"
+    X-Content-Type-Options "nosniff"
+    X-XSS-Protection "1; mode=block"
+    Referrer-Policy "strict-origin-when-cross-origin"
+  }
+
+  # API routes
+  handle /api/* {
+    reverse_proxy localhost:3000
+  }
+
+  # Next.js static files
+  handle /_next/static/* {
+    file_server
+  }
+
+  # Next.js images
+  handle /_next/image* {
+    file_server
+  }
+
+  # Public files
+  handle /favicon.ico {
+    file_server
+  }
+
+  # Everything else - Next.js app
+  handle {
+    reverse_proxy localhost:3000
+  }
+}

@@ -1,0 +1,199 @@
+// filepath: prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ ENUMS ============
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum LinkStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PayoutMethod {
+  BKASH
+  BANK
+}
+
+enum AuditAction {
+  USER_CREATED
+  USER_UPDATED
+  LOGIN
+  PAYMENT_LINK_CREATED
+  PAYMENT_LINK_SHARED
+  TRANSACTION_CREATED
+  TRANSACTION_SUCCESS
+  TRANSACTION_FAILED
+  PAYOUT_INITIATED
+  PAYOUT_COMPLETED
+  PAYOUT_FAILED
+}
+
+// ============ MODELS ============
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String?
+  phone         String?   @unique
+  bkashNumber   String?
+  bankAccount   String?
+  bankName      String?
+  bankRouting   String?
+  plan          Plan      @default(FREE)
+  nid           String?
+  tin           String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  paymentLinks  PaymentLink[]
+  transactions  Transaction[]
+  payouts       Payout[]
+  auditLogs     AuditLog[]
+  sessions      Session[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+}
+
+model PaymentLink {
+  id             String    @id @default(cuid())
+  userId         String
+  amount         Int
+  description    String    @db.VarChar(500)
+  customerName   String?
+  customerEmail String?
+  customerMobile String?
+  status         LinkStatus @default(PENDING)
+  aamarPayId    String?
+  aamarPayUrl   String?
+  shareUrl      String    @unique
+  expiresAt     DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([shareUrl])
+  @@index([status])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  paymentLinkId   String
+  userId          String
+  amount          Int
+  platformFee     Int
+  gatewayFee      Int
+  netAmount       Int
+  status          TransactionStatus @default(PENDING)
+  aamarPayTxnId   String?
+  aamarPayFees    String?
+  metadata        String?
+  payoutStatus    PayoutStatus      @default(PENDING)
+  payoutId       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  paymentLink PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payout     Payout?     @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@index([paymentLinkId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Payout {
+  id          String       @id @default(cuid())
+  userId      String
+  amount      Int
+  method      PayoutMethod
+  status      PayoutStatus @default(PENDING)
+  bkashTxnId  String?
+  bankTxnId   String?
+  processedAt DateTime?
+  failureMsg  String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  eventType   String
+  payload     Json
+  processed   Boolean  @default(false)
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
+  @@index([processed])
+}
+
+model AuditLog {
+  id        String     @id @default(cuid())
+  userId    String?
+  action    AuditAction
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime   @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
