@@ -1,65 +1,112 @@
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { TrendingUp, TrendingDown, CreditCard, Link as LinkIcon, DollarSign, Percent } from 'lucide-react'
+import { TrendingUp, CreditCard, Link as LinkIcon, DollarSign, Percent, BarChart3 } from 'lucide-react'
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts'
 
-export default async function AnalyticsPage() {
-  const session = await auth()
-  if (!session?.user?.id) return null
-
-  const now = new Date()
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-
-  const [paymentLinks, transactions, recentTransactions] = await Promise.all([
-    db.paymentLink.count({ where: { userId: session.user.id } }),
-    db.transaction.findMany({
-      where: {
-        userId: session.user.id,
-        status: 'SUCCESS',
-        createdAt: { gte: thirtyDaysAgo }
-      }
-    }),
-    db.transaction.findMany({
-      where: {
-        userId: session.user.id,
-        status: 'SUCCESS'
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 30
-    })
-  ])
-
-  type TxSummary = {
+interface AnalyticsData {
+  overview: {
+    totalEarnings: number
+    totalVolume: number
+    totalFees: number
+    transactionCount: number
+    paymentLinksCount: number
+    successRate: number
+  }
+  dailyEarnings: { date: string; earnings: number }[]
+  dailyTransactions: { date: string; count: number }[]
+  topTransactions: {
     id: string
     amount: number
     netAmount: number
     platformFee: number
     gatewayFee: number
-    createdAt: Date
+    createdAt: string
+    description: string
+  }[]
+  feeBreakdown: {
+    platformFee: number
+    gatewayFee: number
+  }
+}
+
+const COLORS = ['#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444']
+
+export default function AnalyticsPage() {
+  const [data, setData] = useState<AnalyticsData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [])
+
+  async function fetchAnalytics() {
+    try {
+      const res = await fetch('/api/users/me/analytics')
+      const result = await res.json()
+      if (result.success) {
+        setData(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const typedRecentTransactions = recentTransactions as TxSummary[]
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
+          <p className="text-slate-600">Track your earnings and performance</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-slate-200 rounded w-1/2 mb-2" />
+                <div className="h-8 bg-slate-200 rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
-  const totalEarnings = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.netAmount, 0)
-  const totalAmount = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.amount, 0)
-  const totalFees = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.platformFee + t.gatewayFee, 0)
+  const stats = data?.overview || {
+    totalEarnings: 0,
+    totalVolume: 0,
+    totalFees: 0,
+    transactionCount: 0,
+    paymentLinksCount: 0,
+    successRate: 0
+  }
 
-  const dailyEarnings: Record<string, number> = {}
-  typedRecentTransactions.forEach((t: TxSummary) => {
-    const date = new Date(t.createdAt).toISOString().split('T')[0]
-    dailyEarnings[date] = (dailyEarnings[date] || 0) + t.netAmount
-  })
+  const chartData = data?.dailyEarnings || []
+  const transactionChartData = data?.dailyTransactions || []
 
-  const sortedDates = Object.keys(dailyEarnings).sort()
-  const chartData = sortedDates.slice(-14).map(date => ({
-    date,
-    earnings: dailyEarnings[date] / 100
-  }))
-
-  const successRate = paymentLinks > 0
-    ? Math.round((recentTransactions.length / paymentLinks) * 100)
-    : 0
+  const pieData = data?.feeBreakdown ? [
+    { name: 'Platform Fee (0.75%)', value: data.feeBreakdown.platformFee },
+    { name: 'Gateway Fee (2.55%)', value: data.feeBreakdown.gatewayFee },
+    { name: 'You Receive', value: stats.totalVolume - data.feeBreakdown.platformFee - data.feeBreakdown.gatewayFee }
+  ] : []
 
   return (
     <div className="space-y-6">
@@ -68,26 +115,27 @@ export default async function AnalyticsPage() {
         <p className="text-slate-600">Track your earnings and performance</p>
       </div>
 
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-green-200 bg-green-50/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Earnings</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700">Total Earnings</CardTitle>
             <DollarSign className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalEarnings)}</div>
-            <p className="text-xs text-slate-500">Last 30 days</p>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalEarnings)}</div>
+            <p className="text-xs text-green-600/70">Net earnings</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Transactions</CardTitle>
-            <CreditCard className="w-4 h-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-slate-600">Total Volume</CardTitle>
+            <TrendingUp className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{recentTransactions.length}</div>
-            <p className="text-xs text-slate-500">Successful</p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalVolume)}</div>
+            <p className="text-xs text-slate-500">{stats.transactionCount} transactions</p>
           </CardContent>
         </Card>
 
@@ -97,8 +145,8 @@ export default async function AnalyticsPage() {
             <LinkIcon className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paymentLinks}</div>
-            <p className="text-xs text-slate-500">Created</p>
+            <div className="text-2xl font-bold">{stats.paymentLinksCount}</div>
+            <p className="text-xs text-slate-500">Created links</p>
           </CardContent>
         </Card>
 
@@ -108,96 +156,178 @@ export default async function AnalyticsPage() {
             <Percent className="w-4 h-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{successRate}%</div>
+            <div className="text-2xl font-bold">{stats.successRate}%</div>
             <p className="text-xs text-slate-500">Payment completion</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Charts Row */}
       <div className="grid md:grid-cols-2 gap-6">
+        {/* Earnings Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Fee Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Total Volume</span>
-              <span className="font-semibold">{formatCurrency(totalAmount)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Platform Fee (0.75%)</span>
-              <span className="font-semibold text-red-600">
-                -{formatCurrency(typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.platformFee, 0))}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600">Gateway Fee (2.55%)</span>
-              <span className="font-semibold text-red-600">
-                -{formatCurrency(typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.gatewayFee, 0))}
-              </span>
-            </div>
-            <div className="border-t pt-4 flex justify-between items-center">
-              <span className="font-semibold">You Receive</span>
-              <span className="text-xl font-bold text-green-600">{formatCurrency(totalEarnings)}</span>
-            </div>
-            <div className="text-sm text-slate-500 text-center">
-              Effective rate: {totalAmount > 0 ? ((totalEarnings / totalAmount) * 100).toFixed(2) : 0}%
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Performance</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-green-600" />
+              Earnings Over Time
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {chartData.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No data yet</p>
-                <p className="text-sm">Create payment links to see your analytics</p>
+              <div className="h-[300px] flex items-center justify-center text-slate-500">
+                <div className="text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No earnings data yet</p>
+                  <p className="text-sm">Create payment links to see your earnings chart</p>
+                </div>
               </div>
             ) : (
-              <div className="space-y-2">
-                {chartData.slice(-7).reverse().map((day, i) => (
-                  <div key={day.date} className="flex items-center gap-4">
-                    <span className="text-sm text-slate-500 w-20">
-                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${Math.min((day.earnings / Math.max(...chartData.map(d => d.earnings))) * 100, 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium w-20 text-right">
-                      {formatCurrency(day.earnings * 100)}
-                    </span>
-                  </div>
-                ))}
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `৳${(value / 100).toLocaleString()}`}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [formatCurrency(value), 'Earnings']}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="earnings"
+                      stroke="#22c55e"
+                      strokeWidth={2}
+                      dot={{ fill: '#22c55e', strokeWidth: 2 }}
+                      activeDot={{ r: 6, fill: '#16a34a' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Fee Breakdown Pie Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Fee Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pieData.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-slate-500">
+                <div className="text-center">
+                  <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No data yet</p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                      labelLine={false}
+                    >
+                      {pieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-600">Total Volume</span>
+                <span className="font-semibold">{formatCurrency(stats.totalVolume)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-600">Platform Fee (0.75%)</span>
+                <span className="font-semibold text-red-600">-{formatCurrency(data?.feeBreakdown?.platformFee || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-600">Gateway Fee (2.55%)</span>
+                <span className="font-semibold text-red-600">-{formatCurrency(data?.feeBreakdown?.gatewayFee || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm border-t pt-2 font-semibold">
+                <span>You Receive</span>
+                <span className="text-green-600">{formatCurrency(stats.totalEarnings)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Transaction Volume Chart */}
+      {transactionChartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Transaction Volume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={transactionChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip
+                    formatter={(value: number) => [`${value} transactions`]}
+                    labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Top Transactions</CardTitle>
+          <CardTitle>Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          {typedRecentTransactions.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
+          {!data?.topTransactions || data.topTransactions.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
               <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No transactions yet</p>
+              <p className="text-sm">Create payment links to start accepting payments</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {typedRecentTransactions.slice(0, 5).map((tx: TxSummary) => (
-                <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div>
+              {data.topTransactions.slice(0, 10).map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between py-3 border-b last:border-0">
+                  <div className="flex-1">
                     <p className="font-medium">{formatCurrency(tx.amount)}</p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 truncate max-w-md">
+                      {tx.description}
+                    </p>
+                    <p className="text-xs text-slate-400">
                       {new Date(tx.createdAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',

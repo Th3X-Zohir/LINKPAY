@@ -141,9 +141,65 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Bank Transfer - Create pending payout record for manual/external processing
+    if (method === 'BANK') {
+      if (!user.bankAccount || !user.bankName) {
+        return NextResponse.json(
+          { error: 'Please add your bank details first in Settings' },
+          { status: 400 }
+        )
+      }
+
+      // Create a pending payout record
+      const payout = await db.payout.create({
+        data: {
+          userId: session.user.id,
+          amount,
+          method: 'BANK',
+          status: 'PENDING' // Bank transfers require manual verification
+        }
+      })
+
+      // Update transaction payout status
+      await db.transaction.updateMany({
+        where: {
+          userId: session.user.id,
+          status: 'SUCCESS',
+          payoutStatus: 'PENDING'
+        },
+        data: {
+          payoutStatus: 'PROCESSING',
+          payoutId: payout.id
+        }
+      })
+
+      await db.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: 'PAYOUT_INITIATED',
+          details: {
+            payoutId: payout.id,
+            amount,
+            method: 'BANK',
+            bankName: user.bankName,
+            bankAccount: user.bankAccount.substring(0, 4) + '****' // Masked for security
+          }
+        }
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: payout.id,
+          status: payout.status,
+          message: 'Bank transfer request submitted. Processing typically takes 1-3 business days.'
+        }
+      })
+    }
+
     return NextResponse.json(
-      { error: 'Bank transfer not yet implemented' },
-      { status: 501 }
+      { error: 'Invalid payout method' },
+      { status: 400 }
     )
   } catch (error) {
     console.error('Payout error:', error)
