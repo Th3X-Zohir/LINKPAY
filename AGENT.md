@@ -196,6 +196,29 @@ Freelancer receives: ৳96,700 (96.7%)
 
 ---
 
+## GitHub Rules (CRITICAL)
+
+### Commit Attribution
+- **ALWAYS** use the following author for all commits:
+  - Name: `Th3X-Zohir`
+  - Email: `zohirrayhan@users.noreply.github.com`
+- Set via `git config user.name "Th3X-Zohir"` and `git config user.email "zohirrayhan@users.noreply.github.com"`
+- NEVER use "Claude Opus" or any other author name in commits
+
+### Before Any Git Push
+1. Verify `git config user.name` returns `Th3X-Zohir`
+2. Verify `git config user.email` returns `zohirrayhan@users.noreply.github.com`
+3. If not set, run:
+   ```bash
+   git config user.name "Th3X-Zohir"
+   git config user.email "zohirrayhan@users.noreply.github.com"
+   ```
+
+### Branch Convention
+- Default branch: `main`
+- Use `git branch -M main`
+---
+
 ## Documentation
 
 - [Business Plan](./plan.txt) — Full business plan
