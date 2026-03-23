@@ -222,4 +222,5 @@ Freelancer receives: ৳96,700 (96.7%)
 ## Documentation
 
 - [Business Plan](./plan.txt) — Full business plan
+- [Infrastructure Spec](./docs/INFRASTRUCTURE.md) — Complete system architecture
 - [aamarPay Docs](https://aamarpay.com/docs) — Gateway documentation
