@@ -132,9 +132,7 @@ export async function PUT(
       data: {
         userId: session.user.id,
         action: 'PAYMENT_LINK_UPDATED',
-        entity: 'PaymentLink',
-        entityId: id,
-        details: { changes: parsed.data }
+        details: { changes: parsed.data, entityId: id }
       }
     })
 
@@ -197,8 +195,7 @@ export async function DELETE(
         data: {
           userId: session.user.id,
           action: 'PAYMENT_LINK_CANCELLED',
-          entity: 'PaymentLink',
-          entityId: id
+          details: { entityId: id }
         }
       })
 
@@ -216,9 +213,7 @@ export async function DELETE(
       data: {
         userId: session.user.id,
         action: 'PAYMENT_LINK_DELETED',
-        entity: 'PaymentLink',
-        entityId: id,
-        details: { shareUrl: existing.shareUrl }
+        details: { shareUrl: existing.shareUrl, entityId: id }
       }
     })
 

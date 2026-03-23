@@ -196,7 +196,7 @@ export default function AnalyticsPage() {
                       tickFormatter={(value) => `৳${(value / 100).toLocaleString()}`}
                     />
                     <Tooltip
-                      formatter={(value: number) => [formatCurrency(value), 'Earnings']}
+                      formatter={(value) => [formatCurrency(Number(value) || 0), 'Earnings']}
                       labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     />
                     <Line
@@ -239,7 +239,7 @@ export default function AnalyticsPage() {
                       outerRadius={100}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(1)}%`}
                       labelLine={false}
                     >
                       {pieData.map((_, index) => (
@@ -247,7 +247,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value) => formatCurrency(Number(value) || 0)}
                     />
                   </PieChart>
                 </ResponsiveContainer>

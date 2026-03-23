@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
           user: {
             select: { id: true, name: true, email: true, bkashNumber: true }
           },
-          transaction: {
+          transactions: {
             select: { id: true, amount: true }
           }
         }
