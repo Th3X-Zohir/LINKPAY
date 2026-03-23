@@ -196,7 +196,7 @@ export default function AnalyticsPage() {
                       tickFormatter={(value) => `৳${(value / 100).toLocaleString()}`}
                     />
                     <Tooltip
-                      formatter={(value) => [formatCurrency(Number(value) || 0), 'Earnings']}
+                      formatter={(value) => [formatCurrency(Number(value) || 0) as string, 'Earnings']}
                       labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     />
                     <Line
@@ -247,7 +247,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value) => formatCurrency(Number(value) || 0)}
+                      formatter={(value) => formatCurrency(Number(value) || 0) as string}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
                   />
                   <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                   <Tooltip
-                    formatter={(value: number) => [`${value} transactions`]}
+                    formatter={(value) => [`${value || 0} transactions`]}
                     labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   />
                   <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
