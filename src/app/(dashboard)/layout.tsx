@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
+import { SidebarNav } from '@/components/layout/sidebar-nav'
+import { MobileNav } from '@/components/layout/sidebar-nav'
 
 export default async function DashboardLayout({
   children,
@@ -32,9 +34,13 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-6">
-        {children}
-      </main>
+      <div className="flex">
+        <SidebarNav />
+        <main className="flex-1 container mx-auto px-4 py-6 pb-20 md:pb-6">
+          {children}
+        </main>
+      </div>
+      <MobileNav />
     </div>
   )
 }

@@ -57,6 +57,15 @@ export async function createAamarPayPayment(request: AamarPayPaymentRequest): Pr
 
     const text = await response.text()
 
+    // Check if response is HTML (indicates gateway error or 404)
+    if (text.trim().startsWith('<') || !text.includes('{')) {
+      console.error('aamarPay gateway error:', text.substring(0, 200))
+      return {
+        status: 'fail',
+        error: `Payment gateway is currently unavailable. Please try again later or contact support. (Error: ${response.status})`
+      }
+    }
+
     let data: Record<string, unknown>
     try {
       data = JSON.parse(text)
