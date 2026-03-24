@@ -130,6 +130,7 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
           <input type="hidden" name="shareUrl" value={paymentLink.shareUrl} />
           <button
             type="submit"
+            aria-label="Pay now"
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2"
           >

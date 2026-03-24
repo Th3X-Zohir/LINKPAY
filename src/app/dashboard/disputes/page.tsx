@@ -116,9 +116,10 @@ export default function DisputesPage() {
               {disputes.map(dispute => {
                 const StatusIcon = disputeStatusColors[dispute.status]?.icon || Clock
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={dispute.id}
-                    className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-4 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer text-left"
                     onClick={() => setSelectedDispute(dispute)}
                   >
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${disputeStatusColors[dispute.status]?.bg}`}>
@@ -144,7 +145,7 @@ export default function DisputesPage() {
                     </div>
 
                     <ChevronRight className="w-5 h-5 text-slate-400" />
-                  </div>
+                  </button>
                 )
               })}
             </div>

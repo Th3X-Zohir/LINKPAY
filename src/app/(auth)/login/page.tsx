@@ -188,9 +188,11 @@ export default function LoginPage() {
         </CardHeader>
 
         {/* Login Method Tabs */}
-        <div className="px-6 flex gap-2">
+        <div role="tablist" className="px-6 flex gap-2">
           <Button
             type="button"
+            role="tab"
+            aria-selected={loginMethod === 'password'}
             variant={loginMethod === 'password' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setLoginMethod('password')}
@@ -201,6 +203,8 @@ export default function LoginPage() {
           </Button>
           <Button
             type="button"
+            role="tab"
+            aria-selected={loginMethod === 'otp'}
             variant={loginMethod === 'otp' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setLoginMethod('otp')}
@@ -211,6 +215,8 @@ export default function LoginPage() {
           </Button>
           <Button
             type="button"
+            role="tab"
+            aria-selected={loginMethod === 'passkey'}
             variant={loginMethod === 'passkey' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setLoginMethod('passkey')}

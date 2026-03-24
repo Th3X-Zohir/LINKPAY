@@ -21,7 +21,7 @@ export default async function DashboardLayout({
       <div className="min-h-screen bg-slate-100">
         {/* Header */}
         <header className="bg-white border-b sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <nav aria-label="Dashboard navigation" className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">LP</span>
@@ -31,12 +31,12 @@ export default async function DashboardLayout({
             <div className="flex items-center gap-4">
               <span className="text-sm text-slate-600">{session.user.email}</span>
               <form action="/api/auth/signout" method="POST">
-                <button type="submit" className="text-sm text-slate-600 hover:text-slate-900">
+                <button type="submit" aria-label="Sign out" className="text-sm text-slate-600 hover:text-slate-900">
                   Sign Out
                 </button>
               </form>
             </div>
-          </div>
+          </nav>
         </header>
 
         <div className="flex">

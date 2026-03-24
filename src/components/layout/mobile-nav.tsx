@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Link2, CreditCard, ArrowUpRight, Settings } from 'lucide-react'
+import { Home, Link2, CreditCard, ArrowUpRight, Settings, FileText, AlertCircle, BarChart3, MoreHorizontal } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 const navItems = [
   { href: '/dashboard', label: 'Home', icon: Home },
@@ -10,6 +11,13 @@ const navItems = [
   { href: '/dashboard/transactions', label: 'Transactions', icon: CreditCard },
   { href: '/dashboard/payouts', label: 'Payouts', icon: ArrowUpRight },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+]
+
+const moreNavItems = [
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard/documents', label: 'Documents', icon: FileText },
+  { href: '/dashboard/disputes', label: 'Disputes', icon: AlertCircle },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
 ]
 
 export function MobileNav() {
@@ -66,6 +74,30 @@ export function MobileNav() {
               </Link>
             )
           })}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Link
+                href="#"
+                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+                aria-label="More options"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+                <span className="text-xs font-medium">More</span>
+              </Link>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {moreNavItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link href={item.href} className="flex items-center gap-2">
+                      <Icon className="w-4 h-4" /> {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </nav>
     </>

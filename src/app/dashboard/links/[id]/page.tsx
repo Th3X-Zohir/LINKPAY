@@ -17,10 +17,10 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  QrCode,
   Share2,
   Loader2
 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   Dialog,
   DialogContent,
@@ -182,9 +182,14 @@ export default function PaymentLinkDetailPage() {
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-slate-900 mb-2">Payment Link Not Found</h2>
         <p className="text-slate-500 mb-4">This payment link may have been deleted or you don&apos;t have access.</p>
-        <Link href="/dashboard/links">
-          <Button>Back to Links</Button>
-        </Link>
+        <div className="flex gap-2 justify-center">
+          <Button onClick={() => fetchPaymentLink()} variant="outline">
+            Try Again
+          </Button>
+          <Link href="/dashboard/links">
+            <Button>Back to Links</Button>
+          </Link>
+        </div>
       </div>
     )
   }
@@ -362,9 +367,7 @@ export default function PaymentLinkDetailPage() {
 
             {/* QR Code placeholder */}
             <div className="flex justify-center p-4 bg-slate-50 rounded-lg">
-              <div className="w-32 h-32 bg-slate-200 rounded flex items-center justify-center">
-                <QrCode className="w-16 h-16 text-slate-400" />
-              </div>
+              <QRCodeSVG value={paymentUrl} size={128} />
             </div>
           </CardContent>
         </Card>

@@ -42,7 +42,7 @@ export function SidebarNav() {
         <SidebarLink href="/dashboard/links" icon={LinkIcon} label="Payment Links" />
         <SidebarLink href="/dashboard/transactions" icon={CreditCard} label="Transactions" />
         <SidebarLink href="/dashboard/payouts" icon={Wallet} label="Payouts" />
-        <SidebarLink href="/dashboard/documents" icon={FileText} label="Evidence Vault" />
+        <SidebarLink href="/dashboard/documents" icon={FileText} label="Documents" />
         <SidebarLink href="/dashboard/disputes" icon={MessageSquare} label="Disputes" />
         <SidebarLink href="/dashboard/analytics" icon={BarChart3} label="Analytics" />
         <SidebarLink href="/dashboard/settings" icon={Settings} label="Settings" />

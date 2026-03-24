@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight, Loader2 } from 'lucide-react'
+import Link from 'next/link'
 
 interface Transaction {
   id: string
@@ -147,6 +148,9 @@ export default function TransactionsPage() {
             <div className="text-center py-12 text-slate-500">
               <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No transactions yet</p>
+              <Button asChild className="mt-4">
+                <Link href="/dashboard/links/new">Create your first payment link</Link>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">

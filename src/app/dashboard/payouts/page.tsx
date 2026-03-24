@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Wallet, ArrowUpRight, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import Link from 'next/link'
 
 interface Payout {
   id: string
@@ -197,6 +197,9 @@ export default function PayoutsPage() {
               <Wallet className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No payouts yet</p>
               <p className="text-sm">Your withdrawal history will appear here</p>
+              <Button asChild className="mt-4">
+                <Link href="/dashboard/links/new">Create a payment link to earn money</Link>
+              </Button>
             </div>
           ) : (
             <div className="divide-y">

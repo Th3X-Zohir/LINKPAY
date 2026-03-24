@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Building, MapPin, Image, FileText, Save, AlertCircle, CheckCircle, Crown } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -73,7 +74,10 @@ export default function InvoiceSettingsPage() {
 
       if (data.success) {
         setSuccess(true)
-        setTimeout(() => setSuccess(false), 3000)
+        toast.success("Settings saved", { duration: 5000 })
+        setTimeout(() => {
+          setSuccess(false)
+        }, 3000)
       } else {
         setError(data.error)
       }

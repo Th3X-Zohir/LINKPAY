@@ -115,9 +115,10 @@ export function PayoutMethodsForm({
               onChange={(e) => setFormData({ ...formData, bkashNumber: e.target.value })}
               placeholder="01XXXXXXXXX"
               maxLength={11}
+              aria-describedby={formData.bkashNumber && !validateBkash(formData.bkashNumber) ? 'bkash-number-error' : undefined}
             />
             {formData.bkashNumber && !validateBkash(formData.bkashNumber) && (
-              <p className="text-xs text-red-500">Invalid bKash number format (01XXXXXXXXX)</p>
+              <p id="bkash-number-error" className="text-xs text-red-500">Invalid bKash number format (01XXXXXXXXX)</p>
             )}
           </div>
           <Button

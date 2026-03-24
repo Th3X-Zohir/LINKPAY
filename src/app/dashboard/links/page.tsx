@@ -102,7 +102,7 @@ export default function PaymentLinksPage() {
           </div>
           <Link href="/dashboard/links/new">
             <Button className="gap-2">
-              <Plus className="w-4 h-4" /> Create Link
+              <Plus className="w-4 h-4" /> Create Payment Link
             </Button>
           </Link>
         </div>
@@ -160,7 +160,7 @@ export default function PaymentLinksPage() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" aria-label="Payment link actions">
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>

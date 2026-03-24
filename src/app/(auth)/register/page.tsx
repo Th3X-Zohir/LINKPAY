@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -45,6 +45,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [registeredEmail, setRegisteredEmail] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [formData, setFormData] = useState<RegistrationData>({
     email: '',
     password: '',
@@ -230,7 +232,9 @@ export default function RegisterPage() {
 
         return (
           <div key={step.id} className="flex items-center">
-            <div className={`
+            <div
+              aria-label={`Step ${index + 1} of ${STEPS.length}: ${step.label}`}
+              className={`
               flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
               ${isActive ? 'border-blue-600 bg-blue-600 text-white' : isCompleted ? 'border-green-600 bg-green-600 text-white' : 'border-slate-300 text-slate-400'}
             `}>
@@ -475,17 +479,20 @@ export default function RegisterPage() {
           className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
         >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-600">Upload NID Front</p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
         </div>
+        <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.jpeg,.png,.pdf" />
         <div
           className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
         >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-600">Upload NID Back</p>
