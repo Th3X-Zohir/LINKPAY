@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
+import { PaymentLinkCardSkeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Plus, Copy, ExternalLink, MoreHorizontal, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Plus, Copy, ExternalLink, MoreHorizontal, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
@@ -86,8 +87,23 @@ export default function PaymentLinksPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Payment Links</h1>
+            <p className="text-slate-600">Manage your payment links</p>
+          </div>
+          <Link href="/dashboard/links/new">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" /> Create Payment Link
+            </Button>
+          </Link>
+        </div>
+        <div className="grid gap-4">
+          {[...Array(3)].map((_, i) => (
+            <PaymentLinkCardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     )
   }
@@ -124,7 +140,7 @@ export default function PaymentLinksPage() {
         </div>
         <Link href="/dashboard/links/new">
           <Button className="gap-2">
-            <Plus className="w-4 h-4" /> Create Link
+            <Plus className="w-4 h-4" /> Create Payment Link
           </Button>
         </Link>
       </div>

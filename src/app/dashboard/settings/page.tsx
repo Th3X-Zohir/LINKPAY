@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from 'next-auth/react'
-import { User, Wallet, Building, Save, CheckCircle, Loader2 } from 'lucide-react'
+import { User, Wallet, Building, Save, CheckCircle, Loader2, FileText, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [bkashError, setBkashError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -62,6 +64,18 @@ export default function SettingsPage() {
     setProfileLoading(true)
     setError('')
     setSuccess(false)
+    setBkashError('')
+
+    // Validate bKash number if provided
+    if (formData.bkashNumber) {
+      const bkashRegex = /^01[3-9]\d{8}$/
+      if (!bkashRegex.test(formData.bkashNumber.replace(/\s/g, ''))) {
+        setBkashError('Invalid bKash number. Must be 01XXXXXXXXX format.')
+        setPayoutLoading(false)
+        setProfileLoading(false)
+        return
+      }
+    }
 
     try {
       const res = await fetch('/api/users/payout-methods', {
@@ -225,8 +239,14 @@ export default function SettingsPage() {
                 type="tel"
                 placeholder="01XXXXXXXXX"
                 value={formData.bkashNumber}
-                onChange={(e) => setFormData({ ...formData, bkashNumber: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, bkashNumber: e.target.value })
+                  setBkashError('')
+                }}
               />
+              {bkashError && (
+                <p className="text-sm text-red-600">{bkashError}</p>
+              )}
               <p className="text-sm text-slate-500">Primary payout method. Min withdrawal: ৳5.00</p>
             </div>
 
@@ -277,6 +297,23 @@ export default function SettingsPage() {
           </CardContent>
         </form>
       </Card>
+
+      <Link href="/settings/invoice-settings">
+        <Card className="hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">Invoice Settings</h3>
+                <p className="text-sm text-slate-500">Customize your invoice branding and payment terms</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+          </CardContent>
+        </Card>
+      </Link>
 
       <div className="flex justify-end">
         <Button onClick={handleSubmit} disabled={payoutLoading || profileLoading} className="gap-2">

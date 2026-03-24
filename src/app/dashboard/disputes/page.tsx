@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, ChevronRight, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { FileDisputeDialog } from '@/components/dispute/file-dispute-dialog'
 
 interface Dispute {
   id: string
@@ -41,12 +43,14 @@ const disputeStatusColors: Record<string, { bg: string; text: string; icon: Reac
 
 export default function DisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[]>([])
+  const [transactions, setTransactions] = useState<{ id: string; amount: number; status: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null)
 
   useEffect(() => {
     fetchDisputes()
+    fetchTransactions()
   }, [])
 
   const fetchDisputes = async () => {
@@ -65,6 +69,22 @@ export default function DisputesPage() {
     }
   }
 
+  const fetchTransactions = async () => {
+    try {
+      const res = await fetch('/api/transactions')
+      const data = await res.json()
+      if (data.success) {
+        // Filter to only successful transactions that don't have open disputes
+        const successfulTransactions = data.data.filter(
+          (t: { status: string }) => t.status === 'SUCCESS'
+        )
+        setTransactions(successfulTransactions)
+      }
+    } catch (err) {
+      console.error('Failed to fetch transactions')
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -72,6 +92,26 @@ export default function DisputesPage() {
           <h1 className="text-2xl font-bold text-slate-900">Disputes</h1>
           <p className="text-slate-600">Manage your payment disputes</p>
         </div>
+        {transactions.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/transactions">
+              <Button variant="outline" size="sm">
+                View Transactions
+              </Button>
+            </Link>
+            <FileDisputeDialog
+              transactionId={transactions[0].id}
+              transactionAmount={transactions[0].amount}
+              onSuccess={fetchDisputes}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  File Dispute
+                </Button>
+              }
+            />
+          </div>
+        )}
       </div>
 
       {error && (

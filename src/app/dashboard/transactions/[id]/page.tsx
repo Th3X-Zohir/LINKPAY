@@ -20,6 +20,7 @@ import {
   Mail
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { FileDisputeDialog } from '@/components/dispute/file-dispute-dialog'
 
 interface Transaction {
   id: string
@@ -47,6 +48,7 @@ export default function TransactionDetailPage() {
   const [transaction, setTransaction] = useState<Transaction | null>(null)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
+  const [downloadingCompliance, setDownloadingCompliance] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
@@ -101,6 +103,33 @@ export default function TransactionDetailPage() {
       toast.error('Failed to download invoice')
     } finally {
       setDownloading(false)
+    }
+  }
+
+  async function downloadCompliancePack() {
+    if (!transaction) return
+    setDownloadingCompliance(true)
+    try {
+      const res = await fetch(`/api/transactions/${transaction.id}/compliance-pack`)
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `compliance-pack-${transaction.aamarPayTxnId || transaction.id.substring(0, 8)}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success('Compliance pack downloaded')
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to download compliance pack')
+      }
+    } catch (error) {
+      toast.error('Failed to download compliance pack')
+    } finally {
+      setDownloadingCompliance(false)
     }
   }
 
@@ -226,6 +255,15 @@ export default function TransactionDetailPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={downloadCompliancePack}
+            disabled={downloadingCompliance}
+          >
+            <Download className="w-4 h-4 mr-1" />
+            {downloadingCompliance ? 'Loading...' : 'Download Compliance Pack'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={emailInvoice}
             disabled={sendingEmail}
           >
@@ -239,6 +277,13 @@ export default function TransactionDetailPage() {
           >
             View Payment Link
           </Button>
+          {transaction.status === 'SUCCESS' && (
+            <FileDisputeDialog
+              transactionId={transaction.id}
+              transactionAmount={transaction.amount}
+              onSuccess={() => router.push('/dashboard/disputes')}
+            />
+          )}
         </div>
       </div>
 

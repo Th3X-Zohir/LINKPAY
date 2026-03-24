@@ -42,6 +42,7 @@ interface PaymentLink {
   customerEmail: string | null
   customerMobile: string | null
   createdAt: string
+  expiresAt: string | null
   transactions: Array<{
     id: string
     amount: number
@@ -60,6 +61,8 @@ export default function PaymentLinkDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [editDescription, setEditDescription] = useState('')
+  const [editAmount, setEditAmount] = useState('')
+  const [editExpiresAt, setEditExpiresAt] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -74,6 +77,8 @@ export default function PaymentLinkDetailPage() {
       if (data.success) {
         setPaymentLink(data.data)
         setEditDescription(data.data.description)
+        setEditAmount(data.data.amount.toString())
+        setEditExpiresAt(data.data.expiresAt ? new Date(data.data.expiresAt).toISOString().slice(0, 16) : '')
       }
     } catch (error) {
       console.error('Failed to fetch payment link:', error)
@@ -112,10 +117,22 @@ export default function PaymentLinkDetailPage() {
     setSaving(true)
 
     try {
+      const updateData: { description: string; amount?: number; expiresAt?: string | null } = {
+        description: editDescription
+      }
+
+      if (editAmount) {
+        updateData.amount = parseInt(editAmount, 10)
+      }
+
+      if (editExpiresAt) {
+        updateData.expiresAt = new Date(editExpiresAt).toISOString()
+      }
+
       const res = await fetch(`/api/payment-links/${paymentLink.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: editDescription })
+        body: JSON.stringify(updateData)
       })
 
       if (res.ok) {
@@ -261,6 +278,26 @@ export default function PaymentLinkDetailPage() {
                     onChange={(e) => setEditDescription(e.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount (BDT)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="100"
+                    max="10000000"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiresAt">Expiry Date (Optional)</Label>
+                  <Input
+                    id="expiresAt"
+                    type="datetime-local"
+                    value={editExpiresAt}
+                    onChange={(e) => setEditExpiresAt(e.target.value)}
+                  />
+                </div>
                 <div className="flex gap-2">
                   <Button onClick={handleSaveEdit} disabled={saving}>
                     {saving ? 'Saving...' : 'Save Changes'}
@@ -302,6 +339,13 @@ export default function PaymentLinkDetailPage() {
                   <p className="text-sm text-slate-500 mb-1">Created</p>
                   <p className="font-medium">{formatDate(paymentLink.createdAt)}</p>
                 </div>
+
+                {paymentLink.expiresAt && (
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">Expires</p>
+                    <p className="font-medium">{formatDate(paymentLink.expiresAt)}</p>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm text-slate-500 mb-1">aamarPay ID</p>

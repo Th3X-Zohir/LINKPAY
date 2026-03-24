@@ -24,6 +24,7 @@ interface PaymentFormProps {
 
 export function PaymentForm({ paymentLink }: PaymentFormProps) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
   const initiateUrl = `${appUrl}/api/public/pay/init`
 
@@ -46,6 +47,7 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
       }
     } catch (error) {
       console.error('Payment initiation failed:', error)
+      setError(error instanceof Error ? error.message : 'Payment initiation failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -125,8 +127,14 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
           )}
         </div>
 
-        {/* Pay Button */}
-        <form onSubmit={handleSubmit}>
+        {error && (
+            <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md mb-4">
+              {error}
+            </div>
+          )}
+
+          {/* Pay Button */}
+          <form onSubmit={handleSubmit}>
           <input type="hidden" name="shareUrl" value={paymentLink.shareUrl} />
           <button
             type="submit"

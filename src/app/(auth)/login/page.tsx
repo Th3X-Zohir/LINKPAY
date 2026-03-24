@@ -171,6 +171,10 @@ export default function LoginPage() {
     }
   }
 
+  // Note: Passkey login is handled via onClick on the Passkey button (outside the form).
+  // When loginMethod is 'passkey', the form's onSubmit is not used - this is intentional
+  // because passkey authentication is triggered directly by the button's onClick handler.
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md">
@@ -343,12 +347,7 @@ export default function LoginPage() {
                   Create an account
                 </Link>
               </p>
-              <p>
-                <Link href="/auth/forgot-password" className="text-slate-500 hover:underline text-xs">
-                  Forgot password?
-                </Link>
-              </p>
-            </div>
+                          </div>
           </CardFooter>
         </form>
       </Card>

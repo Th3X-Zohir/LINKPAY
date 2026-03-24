@@ -30,6 +30,11 @@ interface RegistrationData {
   bankRouting: string
 }
 
+interface SelectedDocuments {
+  nidFront: File | null
+  nidBack: File | null
+}
+
 const STEPS: { id: RegistrationStep; label: string; icon: typeof User }[] = [
   { id: 'account', label: 'Account', icon: User },
   { id: 'personal', label: 'Personal', icon: Shield },
@@ -45,7 +50,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [registeredEmail, setRegisteredEmail] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState<RegistrationData>({
     email: '',
@@ -62,6 +66,13 @@ export default function RegisterPage() {
     bankRouting: '',
   })
 
+  const [selectedDocuments, setSelectedDocuments] = useState<SelectedDocuments>({
+    nidFront: null,
+    nidBack: null,
+  })
+  const nidFrontInputRef = useRef<HTMLInputElement>(null)
+  const nidBackInputRef = useRef<HTMLInputElement>(null)
+
   const stepIndex = STEPS.findIndex(s => s.id === currentStep)
 
   const validateStep = (step: RegistrationStep): string | null => {
@@ -77,6 +88,7 @@ export default function RegisterPage() {
         if (!formData.name) return 'Full name is required'
         if (!formData.phone) return 'Phone number is required'
         if (!/^01[3-9]\d{8}$/.test(formData.phone)) return 'Invalid bKash number format (01XXXXXXXXX)'
+        if (formData.nid && !/^(\d{13}|\d{17})$/.test(formData.nid)) return 'Invalid NID format (13 or 17 digits)'
         return null
       case 'payout':
         if (!formData.bkashNumber) return 'bKash number is required'
@@ -209,6 +221,29 @@ export default function RegisterPage() {
         throw new Error('Failed to save profile')
       }
 
+      // Upload documents if selected
+      const documentsToUpload = [
+        { file: selectedDocuments.nidFront, type: 'ID_PROOF' as const },
+        { file: selectedDocuments.nidBack, type: 'ID_PROOF' as const },
+      ]
+
+      for (const doc of documentsToUpload) {
+        if (doc.file) {
+          const uploadFormData = new FormData()
+          uploadFormData.append('file', doc.file)
+          uploadFormData.append('type', doc.type)
+
+          const uploadRes = await fetch('/api/users/documents', {
+            method: 'POST',
+            body: uploadFormData,
+          })
+
+          if (!uploadRes.ok) {
+            console.error('Failed to upload document:', doc.type)
+          }
+        }
+      }
+
       setCurrentStep('complete')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -330,6 +365,8 @@ export default function RegisterPage() {
           placeholder="13-digit NID number"
           value={formData.nid}
           onChange={(e) => updateFormData('nid', e.target.value)}
+          required
+          aria-required="true"
         />
         <p className="text-sm text-slate-500">Required for KYC verification (FULL level)</p>
       </div>
@@ -479,25 +516,50 @@ export default function RegisterPage() {
           className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
           role="button"
           tabIndex={0}
-          onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+          onClick={() => nidFrontInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nidFrontInputRef.current?.click(); } }}
+          aria-label="Upload NID Front"
         >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600">Upload NID Front</p>
+          <p className="text-sm text-slate-600">
+            {selectedDocuments.nidFront ? `Selected: ${selectedDocuments.nidFront.name}` : 'Upload NID Front'}
+          </p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
         </div>
-        <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.jpeg,.png,.pdf" />
+        <input
+          type="file"
+          ref={nidFrontInputRef}
+          className="hidden"
+          accept=".jpg,.jpeg,.png,.pdf"
+          onChange={(e) => {
+            const file = e.target.files?.[0] || null
+            setSelectedDocuments(prev => ({ ...prev, nidFront: file }))
+          }}
+        />
         <div
           className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
           role="button"
           tabIndex={0}
-          onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+          onClick={() => nidBackInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nidBackInputRef.current?.click(); } }}
+          aria-label="Upload NID Back"
         >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600">Upload NID Back</p>
+          <p className="text-sm text-slate-600">
+            {selectedDocuments.nidBack ? `Selected: ${selectedDocuments.nidBack.name}` : 'Upload NID Back'}
+          </p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
         </div>
+        <input
+          type="file"
+          ref={nidBackInputRef}
+          className="hidden"
+          accept=".jpg,.jpeg,.png,.pdf"
+          onChange={(e) => {
+            const file = e.target.files?.[0] || null
+            setSelectedDocuments(prev => ({ ...prev, nidBack: file }))
+          }}
+        />
         <p className="text-xs text-slate-500 text-center">
           You can skip this step and upload documents later from your dashboard.
         </p>

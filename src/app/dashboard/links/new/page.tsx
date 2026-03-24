@@ -18,7 +18,8 @@ export default function CreatePaymentLinkPage() {
     description: '',
     customerName: '',
     customerEmail: '',
-    customerMobile: ''
+    customerMobile: '',
+    expiresAt: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +38,8 @@ export default function CreatePaymentLinkPage() {
           description: formData.description,
           customerName: formData.customerName || undefined,
           customerEmail: formData.customerEmail || undefined,
-          customerMobile: formData.customerMobile || undefined
+          customerMobile: formData.customerMobile || undefined,
+          expiresAt: formData.expiresAt || undefined
         })
       })
 
@@ -149,6 +151,20 @@ export default function CreatePaymentLinkPage() {
                 value={formData.customerEmail}
                 onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expiresAt">Expiry Date (optional)</Label>
+              <Input
+                id="expiresAt"
+                type="date"
+                value={formData.expiresAt}
+                onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-sm text-slate-500">
+                Leave empty for no expiration
+              </p>
             </div>
 
             <div className="pt-4">

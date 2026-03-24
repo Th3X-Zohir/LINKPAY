@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 const updatePaymentLinkSchema = z.object({
   description: z.string().min(1).max(500).optional(),
+  amount: z.number().int().min(100).max(10000000).optional(),
   serviceCategory: z.enum(['WEB_DEVELOPMENT', 'GRAPHIC_DESIGN', 'DATA_ENTRY', 'CONSULTING', 'COPYWRITING', 'VIDEO_EDITING', 'OTHER']).optional(),
   expiresAt: z.string().datetime().optional().nullable()
 })
@@ -125,6 +126,7 @@ export async function PUT(
       where: { id },
       data: {
         description: parsed.data.description,
+        amount: parsed.data.amount,
         serviceCategory: parsed.data.serviceCategory,
         expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : undefined
       }

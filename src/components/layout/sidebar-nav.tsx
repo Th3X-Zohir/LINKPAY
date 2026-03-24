@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard,
   Link as LinkIcon,
@@ -11,7 +12,8 @@ import {
   MessageSquare,
   BarChart3,
   Settings,
-  ExternalLink
+  ExternalLink,
+  Shield
 } from 'lucide-react'
 
 function SidebarLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
@@ -35,6 +37,21 @@ function SidebarLink({ href, icon: Icon, label }: { href: string; icon: React.El
 }
 
 export function SidebarNav() {
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminChecked, setAdminChecked] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/check')
+      .then(res => res.json())
+      .then(data => {
+        setIsAdmin(data.isAdmin)
+        setAdminChecked(true)
+      })
+      .catch(() => {
+        setAdminChecked(true)
+      })
+  }, [])
+
   return (
     <aside className="w-64 bg-white border-r min-h-[calc(100vh-57px)] sticky top-[57px] hidden md:block">
       <nav className="p-4 space-y-1">
@@ -47,6 +64,14 @@ export function SidebarNav() {
         <SidebarLink href="/dashboard/analytics" icon={BarChart3} label="Analytics" />
         <SidebarLink href="/dashboard/settings" icon={Settings} label="Settings" />
       </nav>
+
+      {/* Admin Section */}
+      {adminChecked && isAdmin && (
+        <div className="p-4 border-t mt-4">
+          <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">Admin</p>
+          <SidebarLink href="/admin" icon={Shield} label="Admin Panel" />
+        </div>
+      )}
 
       {/* Client Portal Section */}
       <div className="p-4 border-t mt-4">

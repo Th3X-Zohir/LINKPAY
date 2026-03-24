@@ -1,9 +1,11 @@
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PremiumBadge } from '@/components/premium/PremiumBadge'
-import { Crown, Check, ArrowRight, Star, Zap, Shield, BarChart3 } from 'lucide-react'
+import { Crown, Check, ArrowRight, Star, Zap, Shield, BarChart3, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 const FREE_FEATURES = [
   { name: 'Payment links', limit: '10 links', included: true },
@@ -44,22 +46,55 @@ const TESTIMONIALS = [
   }
 ]
 
-export default async function PremiumPage() {
-  const session = await auth()
+export default function PremiumPage() {
+  const [isPremium, setIsPremium] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
 
-  let userPlan = 'FREE'
+  useEffect(() => {
+    fetch('/api/users/profile')
+        .then(res => res.json())
+        .then(data => {
+          if (data.data?.plan === 'PREMIUM') {
+            setIsPremium(true)
+          }
+          setLoading(false)
+        })
+        .catch(() => {
+          setLoading(false)
+        })
+    } else if (status === 'unauthenticated') {
+      setLoading(false)
+    }
+  }, [status])
 
-  if (session?.user?.id) {
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { plan: true }
-    })
-    if (user) {
-      userPlan = user.plan
+  const handleCheckout = async () => {
+    setCheckoutLoading(true)
+    try {
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST'
+      })
+      const data = await res.json()
+
+      if (data.success && data.data?.checkoutUrl) {
+        window.location.href = data.data.checkoutUrl
+      } else {
+        toast.error(data.error || 'Failed to create checkout')
+        setCheckoutLoading(false)
+      }
+    } catch (error) {
+      toast.error('Failed to create checkout')
+      setCheckoutLoading(false)
     }
   }
 
-  const isPremium = userPlan === 'PREMIUM'
+  if (loading || status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -149,17 +184,28 @@ export default async function PremiumPage() {
             </ul>
 
             {!isPremium && (
-              <form action="/api/payments/checkout" method="POST" className="mt-6">
-                <Button type="submit" className="w-full gap-2 bg-amber-500 hover:bg-amber-600">
-                  Upgrade Now <ArrowRight className="w-4 h-4" />
-                </Button>
-              </form>
+              <Button
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                className="w-full gap-2 bg-amber-500 hover:bg-amber-600 mt-6"
+              >
+                {checkoutLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Upgrade Now <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </Button>
             )}
 
             {isPremium && (
               <div className="mt-6 p-3 bg-green-50 rounded-lg border border-green-200">
                 <p className="text-green-700 text-sm text-center">
-                  ✨ You have access to all premium features
+                  You have access to all premium features
                 </p>
               </div>
             )}
@@ -242,11 +288,23 @@ export default async function PremiumPage() {
       {!isPremium && (
         <div className="text-center py-8">
           <p className="text-slate-600 mb-4">Ready to take your freelance business to the next level?</p>
-          <form action="/api/payments/checkout" method="POST">
-            <Button type="submit" size="lg" className="gap-2 bg-amber-500 hover:bg-amber-600">
-              Upgrade to Premium <ArrowRight className="w-4 h-4" />
-            </Button>
-          </form>
+          <Button
+            onClick={handleCheckout}
+            disabled={checkoutLoading}
+            size="lg"
+            className="gap-2 bg-amber-500 hover:bg-amber-600"
+          >
+            {checkoutLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Upgrade to Premium <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </Button>
           <p className="text-sm text-slate-500 mt-2">Cancel anytime. No questions asked.</p>
         </div>
       )}

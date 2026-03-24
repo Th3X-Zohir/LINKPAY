@@ -33,7 +33,17 @@ export default async function ClientPortalPage({ params }: PageProps) {
   // Fetch the payment link with transactions and user info
   const paymentLink = await db.paymentLink.findUnique({
     where: { id: paymentLinkId },
-    include: {
+    select: {
+      id: true,
+      amount: true,
+      description: true,
+      status: true,
+      serviceCategory: true,
+      paidAt: true,
+      createdAt: true,
+      customerName: true,
+      customerEmail: true,
+      customerMobile: true,
       user: {
         select: {
           id: true,
@@ -45,7 +55,17 @@ export default async function ClientPortalPage({ params }: PageProps) {
         }
       },
       transactions: {
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          amount: true,
+          platformFee: true,
+          gatewayFee: true,
+          netAmount: true,
+          status: true,
+          aamarPayTxnId: true,
+          createdAt: true
+        }
       }
     }
   })

@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight, Loader2 } from 'lucide-react'
+import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 
 interface Transaction {
@@ -23,6 +25,7 @@ interface Transaction {
 }
 
 export default function TransactionsPage() {
+  const router = useRouter()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -78,8 +81,42 @@ export default function TransactionsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Transactions</h1>
+          <p className="text-slate-600">View all your payment transactions</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24 mb-2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-3 border-b last:border-0">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -167,7 +204,11 @@ export default function TransactionsPage() {
                 </thead>
                 <tbody className="divide-y">
                   {transactions.map((tx) => (
-                    <tr key={tx.id} className="text-sm">
+                    <tr
+                      key={tx.id}
+                      className="text-sm hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/dashboard/transactions/${tx.id}`)}
+                    >
                       <td className="py-4">
                         <div className="font-medium">{tx.paymentLink.description}</div>
                         <div className="text-slate-500 text-xs">
