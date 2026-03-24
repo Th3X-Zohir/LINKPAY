@@ -15,7 +15,9 @@ import {
   ArrowUpRight,
   Loader2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Mail
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -44,6 +46,8 @@ export default function TransactionDetailPage() {
   const router = useRouter()
   const [transaction, setTransaction] = useState<Transaction | null>(null)
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
     fetchTransaction()
@@ -71,6 +75,53 @@ export default function TransactionDetailPage() {
     if (!transaction) return
     navigator.clipboard.writeText(transaction.aamarPayTxnId || transaction.id)
     toast.success('Transaction ID copied')
+  }
+
+  async function downloadInvoice() {
+    if (!transaction) return
+    setDownloading(true)
+    try {
+      const res = await fetch(`/api/transactions/${transaction.id}/invoice/download`)
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `invoice-${transaction.aamarPayTxnId || transaction.id.substring(0, 8)}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        toast.success('Invoice downloaded')
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to download invoice')
+      }
+    } catch (error) {
+      toast.error('Failed to download invoice')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  async function emailInvoice() {
+    if (!transaction) return
+    setSendingEmail(true)
+    try {
+      const res = await fetch(`/api/transactions/${transaction.id}/invoice/email`, {
+        method: 'POST'
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success('Invoice sent to email')
+      } else {
+        toast.error(data.error || 'Failed to send invoice')
+      }
+    } catch (error) {
+      toast.error('Failed to send invoice')
+    } finally {
+      setSendingEmail(false)
+    }
   }
 
   function getStatusBadge(status: string) {
@@ -153,13 +204,33 @@ export default function TransactionDetailPage() {
             {getStatusBadge(transaction.status)}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push(`/dashboard/links/${transaction.paymentLink.id}`)}
-        >
-          View Payment Link
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={downloadInvoice}
+            disabled={downloading}
+          >
+            <Download className="w-4 h-4 mr-1" />
+            {downloading ? 'Downloading...' : 'Download Invoice'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={emailInvoice}
+            disabled={sendingEmail}
+          >
+            <Mail className="w-4 h-4 mr-1" />
+            {sendingEmail ? 'Sending...' : 'Email Invoice'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/links/${transaction.paymentLink.id}`)}
+          >
+            View Payment Link
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}

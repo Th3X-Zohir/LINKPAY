@@ -17,13 +17,13 @@ export async function GET() {
       totalTransactions,
       successfulTransactions,
       pendingPayoutsCount,
-      totalPayouts
+      totalPaymentLinks
     ] = await Promise.all([
       db.user.count(),
       db.transaction.count(),
       db.transaction.count({ where: { status: 'SUCCESS' } }),
       db.payout.count({ where: { status: 'PENDING' } }),
-      db.payout.count()
+      db.paymentLink.count()
     ])
 
     // Calculate volume and revenue
@@ -32,109 +32,53 @@ export async function GET() {
       _sum: { amount: true, netAmount: true, platformFee: true }
     })
 
-    // Pending payouts amount
-    const pendingPayoutsAmount = await db.payout.aggregate({
-      where: { status: 'PENDING' },
-      _sum: { amount: true }
-    })
+    const totalVolume = volumeStats._sum.amount || 0
+    const totalRevenue = volumeStats._sum.platformFee || 0
 
-    // Last 7 days signup count
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const recentSignups = await db.user.count({
-      where: { createdAt: { gte: sevenDaysAgo } }
-    })
-
-    // Last 7 days transaction count
-    const recentTransactions = await db.transaction.count({
-      where: {
-        status: 'SUCCESS',
-        createdAt: { gte: sevenDaysAgo }
+    // Recent transactions (last 10)
+    const recentTransactions = await db.transaction.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true, email: true } },
+        paymentLink: { select: { description: true } }
       }
     })
 
-    // Calculate trends (comparing to previous 7 days)
-    const fourteenDaysAgo = new Date()
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
-
-    const previousWeekSignups = await db.user.count({
-      where: {
-        createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo }
+    // Recent users (last 10)
+    const recentUsers = await db.user.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { transactions: true } }
       }
-    })
-
-    const previousWeekTransactions = await db.transaction.count({
-      where: {
-        status: 'SUCCESS',
-        createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo }
-      }
-    })
-
-    // Calculate trend percentages
-    const signupTrend = previousWeekSignups > 0
-      ? Math.round(((recentSignups - previousWeekSignups) / previousWeekSignups) * 100)
-      : recentSignups > 0 ? 100 : 0
-
-    const transactionTrend = previousWeekTransactions > 0
-      ? Math.round(((recentTransactions - previousWeekTransactions) / previousWeekTransactions) * 100)
-      : recentTransactions > 0 ? 100 : 0
-
-    // User plan distribution
-    const planDistribution = await db.user.groupBy({
-      by: ['plan'],
-      _count: { plan: true }
-    })
-
-    // Transaction status distribution
-    const transactionStatusDistribution = await db.transaction.groupBy({
-      by: ['status'],
-      _count: { status: true }
-    })
-
-    // Payout status distribution
-    const payoutStatusDistribution = await db.payout.groupBy({
-      by: ['status'],
-      _count: { status: true }
     })
 
     return NextResponse.json({
       success: true,
       data: {
-        overview: {
-          totalUsers,
-          totalTransactions,
-          successfulTransactions,
-          failedTransactions: totalTransactions - successfulTransactions,
-          pendingPayoutsCount,
-          totalPayouts
-        },
-        volume: {
-          totalVolume: volumeStats._sum.amount || 0,
-          totalNetAmount: volumeStats._sum.netAmount || 0,
-          platformRevenue: volumeStats._sum.platformFee || 0,
-          pendingPayoutsAmount: pendingPayoutsAmount._sum.amount || 0
-        },
-        trends: {
-          recentSignups,
-          signupTrend,
-          recentTransactions,
-          transactionTrend
-        },
-        distribution: {
-          plans: planDistribution.reduce((acc, item) => {
-            acc[item.plan] = item._count.plan
-            return acc
-          }, {} as Record<string, number>),
-          transactionStatuses: transactionStatusDistribution.reduce((acc, item) => {
-            acc[item.status] = item._count.status
-            return acc
-          }, {} as Record<string, number>),
-          payoutStatuses: payoutStatusDistribution.reduce((acc, item) => {
-            acc[item.status] = item._count.status
-            return acc
-          }, {} as Record<string, number>)
-        }
+        totalUsers,
+        totalPaymentLinks,
+        totalTransactions,
+        successfulTransactions,
+        pendingPayouts: pendingPayoutsCount,
+        totalVolume,
+        totalRevenue,
+        recentTransactions: recentTransactions.map(tx => ({
+          id: tx.id,
+          amount: tx.amount,
+          status: tx.status,
+          user: tx.user,
+          paymentLink: tx.paymentLink
+        })),
+        recentUsers: recentUsers.map(user => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          plan: user.plan,
+          createdAt: user.createdAt.toISOString(),
+          _count: user._count
+        }))
       }
     })
   } catch (error) {

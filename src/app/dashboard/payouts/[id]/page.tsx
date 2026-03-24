@@ -16,6 +16,7 @@ import {
   Copy,
   HelpCircle
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface Payout {
@@ -263,6 +264,84 @@ export default function PayoutDetailPage() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Status Timeline */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Status Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col items-center">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  payout.status === 'PENDING' || payout.status === 'PROCESSING' || payout.status === 'COMPLETED'
+                    ? "bg-green-100 text-green-600"
+                    : "bg-slate-100 text-slate-400"
+                )}>
+                  <Clock className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-medium mt-2">Pending</p>
+                {payout.createdAt && (
+                  <p className="text-xs text-slate-500">{formatDate(payout.createdAt)}</p>
+                )}
+              </div>
+
+              <div className={cn(
+                "flex-1 h-1 mx-2",
+                payout.status === 'PROCESSING' || payout.status === 'COMPLETED'
+                  ? "bg-green-500"
+                  : "bg-slate-200"
+              )} />
+
+              <div className="flex flex-col items-center">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  payout.status === 'PROCESSING' || payout.status === 'COMPLETED'
+                    ? "bg-green-100 text-green-600"
+                    : "bg-slate-100 text-slate-400"
+                )}>
+                  <Clock className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-medium mt-2">Processing</p>
+              </div>
+
+              <div className={cn(
+                "flex-1 h-1 mx-2",
+                payout.status === 'COMPLETED'
+                  ? "bg-green-500"
+                  : payout.status === 'FAILED'
+                    ? "bg-red-500"
+                    : "bg-slate-200"
+              )} />
+
+              <div className="flex flex-col items-center">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  payout.status === 'COMPLETED'
+                    ? "bg-green-100 text-green-600"
+                    : payout.status === 'FAILED'
+                      ? "bg-red-100 text-red-600"
+                      : "bg-slate-100 text-slate-400"
+                )}>
+                  {payout.status === 'COMPLETED' ? (
+                    <CheckCircle className="w-5 h-5" />
+                  ) : payout.status === 'FAILED' ? (
+                    <XCircle className="w-5 h-5" />
+                  ) : (
+                    <Clock className="w-5 h-5" />
+                  )}
+                </div>
+                <p className="text-sm font-medium mt-2">
+                  {payout.status === 'FAILED' ? 'Failed' : 'Completed'}
+                </p>
+                {payout.processedAt && (
+                  <p className="text-xs text-slate-500">{formatDate(payout.processedAt)}</p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

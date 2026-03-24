@@ -22,6 +22,10 @@ services:
       - BKASH_URL=${BKASH_URL:-https://tokenized.sandbox.bka.sh/v1.2.0-beta}
       - RESEND_API_KEY=${RESEND_API_KEY:-re_your_resend_api_key}
       - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - ADMIN_EMAILS=admin@linkpay.com,zohirrayhanweb@gmail.com,admin@linkpaybd.com
+      - SSLCOMMERZ_STORE_ID=${SSLCOMMERZ_STORE_ID:-neege6997413bb22cd}
+      - SSLCOMMERZ_STORE_PASSWORD=${SSLCOMMERZ_STORE_PASSWORD:-neege6997413bb22cd@ssl}
+      - SSLCOMMERZ_URL=${SSLCOMMERZ_URL:-https://sandbox.sslcommerz.com}
     depends_on:
       postgres:
         condition: service_healthy

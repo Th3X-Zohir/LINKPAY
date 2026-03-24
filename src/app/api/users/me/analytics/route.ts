@@ -80,14 +80,16 @@ export async function GET() {
         },
         dailyEarnings: earningsChartData,
         dailyTransactions: transactionChartData,
-        topTransactions: transactions.slice(0, 10).map(t => ({
+        recentTransactions: transactions.slice(0, 10).map(t => ({
           id: t.id,
           amount: t.amount,
           netAmount: t.netAmount,
           platformFee: t.platformFee,
           gatewayFee: t.gatewayFee,
           createdAt: t.createdAt.toISOString(),
-          description: ''
+          paymentLink: {
+            description: ''
+          }
         })),
         feeBreakdown
       }
