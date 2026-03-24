@@ -1,34 +1,98 @@
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Wallet, ArrowUpRight, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Wallet, ArrowUpRight, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import Link from 'next/link'
 
-export default async function PayoutsPage() {
-  const session = await auth()
-  if (!session?.user?.id) return null
+interface Payout {
+  id: string
+  amount: number
+  method: 'BKASH' | 'BANK'
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  bkashTxnId: string | null
+  bankTxnId: string | null
+  failureMsg: string | null
+  createdAt: string
+  processedAt: string | null
+}
 
-  const [payouts, pendingTransactions] = await Promise.all([
-    db.payout.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: 'desc' }
-    }),
-    db.transaction.aggregate({
-      where: {
-        userId: session.user.id,
-        status: 'SUCCESS',
-        payoutStatus: 'PENDING'
-      },
-      _sum: { netAmount: true }
-    })
-  ])
+interface BalanceData {
+  availableBalance: number
+  totalPaidOut: number
+  pendingAmount: number
+}
 
-  const availableBalance = pendingTransactions._sum.netAmount || 0
+export default function PayoutsPage() {
+  const [payouts, setPayouts] = useState<Payout[]>([])
+  const [balance, setBalance] = useState<BalanceData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [requesting, setRequesting] = useState(false)
 
-  const successfulPayouts = payouts.filter(p => p.status === 'COMPLETED')
-  const totalPaidOut = successfulPayouts.reduce((sum, p) => sum + p.amount, 0)
+  useEffect(() => {
+    fetchPayouts()
+    fetchBalance()
+  }, [])
+
+  async function fetchPayouts() {
+    try {
+      const res = await fetch('/api/payouts')
+      const data = await res.json()
+      if (data.success) {
+        setPayouts(data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch payouts:', err)
+    }
+  }
+
+  async function fetchBalance() {
+    try {
+      const res = await fetch('/api/payouts/balance')
+      const data = await res.json()
+      if (data.success) {
+        setBalance(data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch balance:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function requestPayout() {
+    if (!balance || balance.availableBalance < 500) return
+
+    setRequesting(true)
+    try {
+      const res = await fetch('/api/payouts/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: balance.availableBalance,
+          method: 'BKASH'
+        })
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        toast.success('Payout requested successfully!')
+        fetchPayouts()
+        fetchBalance()
+      } else {
+        toast.error(data.error || 'Failed to request payout')
+      }
+    } catch (err) {
+      toast.error('Failed to request payout')
+      console.error(err)
+    } finally {
+      setRequesting(false)
+    }
+  }
 
   function getStatusBadge(status: string) {
     switch (status) {
@@ -42,6 +106,18 @@ export default async function PayoutsPage() {
         return <Badge variant="outline">{status}</Badge>
     }
   }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  const availableBalance = balance?.availableBalance || 0
+  const totalPaidOut = balance?.totalPaidOut || 0
+  const pendingAmount = balance?.pendingAmount || 0
 
   return (
     <div className="space-y-6">
@@ -66,7 +142,7 @@ export default async function PayoutsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{formatCurrency(totalPaidOut)}</div>
-            <p className="text-sm text-slate-500 mt-1">{successfulPayouts.length} successful payouts</p>
+            <p className="text-sm text-slate-500 mt-1">{payouts.filter(p => p.status === 'COMPLETED').length} successful payouts</p>
           </CardContent>
         </Card>
         <Card>
@@ -75,11 +151,7 @@ export default async function PayoutsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-yellow-600">
-              {formatCurrency(
-                payouts
-                  .filter(p => p.status === 'PENDING' || p.status === 'PROCESSING')
-                  .reduce((sum, p) => sum + p.amount, 0)
-              )}
+              {formatCurrency(pendingAmount)}
             </div>
             <p className="text-sm text-slate-500 mt-1">In progress</p>
           </CardContent>
@@ -101,13 +173,13 @@ export default async function PayoutsPage() {
                   </p>
                 </div>
               </div>
-              <form action="/api/payouts/request" method="POST">
-                <input type="hidden" name="amount" value={availableBalance} />
-                <input type="hidden" name="method" value="BKASH" />
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                  Withdraw <ArrowUpRight className="w-4 h-4 ml-2" />
-                </Button>
-              </form>
+              <Button
+                onClick={requestPayout}
+                disabled={requesting}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {requesting ? 'Processing...' : 'Withdraw'} <ArrowUpRight className="w-4 h-4 ml-2" />
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -142,7 +214,9 @@ export default async function PayoutsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold">{formatCurrency(payout.amount)}</div>
+                    <Link href={`/dashboard/payouts/${payout.id}`} className="text-xl font-bold hover:underline">
+                      {formatCurrency(payout.amount)}
+                    </Link>
                     {payout.failureMsg && (
                       <div className="text-sm text-red-600 mt-1">{payout.failureMsg}</div>
                     )}

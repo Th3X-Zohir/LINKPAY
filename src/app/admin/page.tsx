@@ -1,76 +1,89 @@
-import { auth } from '@/lib/auth'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Link as LinkIcon, CreditCard, Wallet, TrendingUp, ArrowUpRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Loader2 } from 'lucide-react'
 
-async function getAdminStats() {
-  const { db } = await import('@/lib/db')
-
-  const [
-    totalUsers,
-    totalPaymentLinks,
-    totalTransactions,
-    successfulTransactions,
-    pendingPayouts
-  ] = await Promise.all([
-    db.user.count(),
-    db.paymentLink.count(),
-    db.transaction.count(),
-    db.transaction.count({ where: { status: 'SUCCESS' } }),
-    db.payout.count({ where: { status: { in: ['PENDING', 'PROCESSING'] } } })
-  ])
-
-  const volumeStats = await db.transaction.aggregate({
-    where: { status: 'SUCCESS' },
-    _sum: { amount: true, platformFee: true }
-  })
-
-  const recentTransactions = await db.transaction.findMany({
-    take: 10,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      user: { select: { name: true, email: true } },
-      paymentLink: { select: { description: true } }
-    }
-  })
-
-  const recentUsers = await db.user.findMany({
-    take: 10,
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      plan: true,
-      createdAt: true,
-      _count: { select: { transactions: true } }
-    }
-  })
-
-  return {
-    totalUsers,
-    totalPaymentLinks,
-    totalTransactions,
-    successfulTransactions,
-    pendingPayouts,
-    totalVolume: volumeStats._sum.amount || 0,
-    totalRevenue: volumeStats._sum.platformFee || 0,
-    recentTransactions,
-    recentUsers
-  }
+interface DashboardStats {
+  totalUsers: number
+  totalPaymentLinks: number
+  totalTransactions: number
+  successfulTransactions: number
+  pendingPayouts: number
+  totalVolume: number
+  totalRevenue: number
+  recentTransactions: Array<{
+    id: string
+    amount: number
+    status: string
+    user: { name: string | null; email: string }
+    paymentLink: { description: string }
+  }>
+  recentUsers: Array<{
+    id: string
+    name: string | null
+    email: string
+    plan: string
+    createdAt: string
+    _count: { transactions: number }
+  }>
 }
 
-export default async function AdminDashboardPage() {
-  const session = await auth()
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || []
-  if (!session?.user?.email || !adminEmails.includes(session.user.email)) {
-    redirect('/dashboard')
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [])
+
+  async function fetchDashboard() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/analytics/dashboard')
+      const data = await res.json()
+      if (data.success) {
+        setStats(data.data)
+      } else {
+        setError(data.error || 'Failed to fetch dashboard data')
+      }
+    } catch (err) {
+      setError('Failed to fetch dashboard data')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const stats = await getAdminStats()
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-600">Platform overview and management</p>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-red-600">{error || 'Failed to load dashboard'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

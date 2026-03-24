@@ -17,7 +17,7 @@ interface AamarPayPaymentRequest {
   cancelUrl: string
 }
 
-interface AamarPayPaymentResponse {
+export interface AamarPayPaymentResponse {
   status: 'success' | 'fail'
   payment_id?: string
   payment_url?: string

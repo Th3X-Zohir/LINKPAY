@@ -1,20 +1,55 @@
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight } from 'lucide-react'
+import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight, Loader2 } from 'lucide-react'
 
-export default async function TransactionsPage() {
-  const session = await auth()
-  if (!session?.user?.id) return null
+interface Transaction {
+  id: string
+  amount: number
+  netAmount: number
+  platformFee: number
+  gatewayFee: number
+  status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'REFUNDED'
+  aamarPayTxnId: string | null
+  createdAt: string
+  paymentLink: {
+    id: string
+    description: string
+  }
+}
 
-  const transactions = await db.transaction.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      paymentLink: true
+export default function TransactionsPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/transactions?page=${page}&limit=20`)
+      const data = await res.json()
+      if (data.success) {
+        setTransactions(data.data)
+        setTotalPages(data.pagination?.totalPages || 1)
+      } else {
+        setError(data.error || 'Failed to fetch transactions')
+      }
+    } catch (err) {
+      setError('Failed to fetch transactions')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-  })
+  }, [page])
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [fetchTransactions])
 
   const totalEarnings = transactions
     .filter(t => t.status === 'SUCCESS')
@@ -37,6 +72,30 @@ export default async function TransactionsPage() {
       default:
         return <Clock className="w-4 h-4 text-slate-400" />
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Transactions</h1>
+          <p className="text-slate-600">View all your payment transactions</p>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -131,6 +190,27 @@ export default async function TransactionsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 border rounded-md disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">Page {page} of {totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-4 py-2 border rounded-md disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }

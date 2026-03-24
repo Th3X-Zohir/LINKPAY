@@ -1,54 +1,119 @@
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
-import { Plus, Copy, ExternalLink, MoreHorizontal, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Copy, ExternalLink, MoreHorizontal, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
 
-async function getStatusIcon(status: string) {
-  switch (status) {
-    case 'PAID':
-      return <CheckCircle className="w-4 h-4 text-green-600" />
-    case 'PENDING':
-      return <Clock className="w-4 h-4 text-yellow-600" />
-    case 'EXPIRED':
-    case 'CANCELLED':
-      return <XCircle className="w-4 h-4 text-red-600" />
-    default:
-      return <Clock className="w-4 h-4 text-slate-400" />
-  }
+interface PaymentLink {
+  id: string
+  amount: number
+  description: string
+  status: 'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED'
+  shareUrl: string
+  createdAt: string
+  transactions: Array<{
+    amount: number
+  }>
 }
 
-async function getStatusText(status: string) {
-  switch (status) {
-    case 'PAID':
-      return 'Paid'
-    case 'PENDING':
-      return 'Pending'
-    case 'EXPIRED':
-      return 'Expired'
-    case 'CANCELLED':
-      return 'Cancelled'
-    default:
-      return status
-  }
-}
+export default function PaymentLinksPage() {
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export default async function PaymentLinksPage() {
-  const session = await auth()
-  if (!session?.user?.id) return null
+  useEffect(() => {
+    fetchPaymentLinks()
+  }, [])
 
-  const paymentLinks = await db.paymentLink.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      transactions: {
-        where: { status: 'SUCCESS' }
+  async function fetchPaymentLinks() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/payment-links')
+      const data = await res.json()
+      if (data.success) {
+        setPaymentLinks(data.data)
+      } else {
+        setError(data.error || 'Failed to fetch payment links')
       }
+    } catch (err) {
+      setError('Failed to fetch payment links')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-  })
+  }
+
+  function getStatusIcon(status: string) {
+    switch (status) {
+      case 'PAID':
+        return <CheckCircle className="w-4 h-4 text-green-600" />
+      case 'PENDING':
+        return <Clock className="w-4 h-4 text-yellow-600" />
+      case 'EXPIRED':
+      case 'CANCELLED':
+        return <XCircle className="w-4 h-4 text-red-600" />
+      default:
+        return <Clock className="w-4 h-4 text-slate-400" />
+    }
+  }
+
+  function getStatusText(status: string) {
+    switch (status) {
+      case 'PAID':
+        return 'Paid'
+      case 'PENDING':
+        return 'Pending'
+      case 'EXPIRED':
+        return 'Expired'
+      case 'CANCELLED':
+        return 'Cancelled'
+      default:
+        return status
+    }
+  }
+
+  function copyLink(shareUrl: string) {
+    const url = `${process.env.NEXT_PUBLIC_APP_URL}/pay/${shareUrl}`
+    navigator.clipboard.writeText(url)
+    toast.success('Link copied to clipboard')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Payment Links</h1>
+            <p className="text-slate-600">Manage your payment links</p>
+          </div>
+          <Link href="/dashboard/links/new">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" /> Create Link
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -105,11 +170,7 @@ export default async function PaymentLinksPage() {
                             <ExternalLink className="w-4 h-4 mr-2" /> View Page
                           </a>
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_APP_URL}/pay/${link.shareUrl}`)
-                          }}
-                        >
+                        <DropdownMenuItem onClick={() => copyLink(link.shareUrl)}>
                           <Copy className="w-4 h-4 mr-2" /> Copy Link
                         </DropdownMenuItem>
                       </DropdownMenuContent>

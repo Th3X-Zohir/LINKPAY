@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { createPaymentLinkSchema } from '@/lib/validators'
-import { createAamarPayPayment } from '@/lib/api/aamarPay'
+import { createPayment } from '@/lib/api/payment-gateway'
 
 export async function GET() {
   try {
@@ -81,32 +81,37 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const paymentUrl = `${appUrl}/pay/${shareUrl}`
 
-    const aamarPayResult = await createAamarPayPayment({
-      amount: amount / 100,
+    // Use unified createPayment from payment-gateway.ts
+    const paymentResult = await createPayment({
+      amount: amount / 100, // Convert to BDT from poisha
       description,
       customerName: customerName || user.name || 'Customer',
       customerEmail: customerEmail || user.email || '',
       customerMobile: customerMobile || user.phone || '01XXXXXXXXX',
       successUrl: `${paymentUrl}/success`,
       failUrl: `${paymentUrl}/fail`,
-      cancelUrl: `${paymentUrl}/cancel`
+      cancelUrl: `${paymentUrl}/cancel`,
+      gateway: body.gateway || 'aamarpay'
     })
 
-    if (aamarPayResult.status === 'success' && aamarPayResult.payment_id) {
+    if (paymentResult.success && paymentResult.paymentId) {
       await db.paymentLink.update({
         where: { id: paymentLink.id },
         data: {
-          aamarPayId: aamarPayResult.payment_id,
-          aamarPayUrl: aamarPayResult.payment_url
+          aamarPayId: paymentResult.paymentId, // Generic field for gateway transaction ID
+          aamarPayUrl: paymentResult.paymentUrl
         }
       })
+    } else {
+      console.error('Payment creation failed:', paymentResult.error)
     }
 
     return NextResponse.json({
       success: true,
       data: {
         ...paymentLink,
-        paymentUrl: `${appUrl}/pay/${shareUrl}`
+        paymentUrl: `${appUrl}/pay/${shareUrl}`,
+        gateway: paymentResult.gateway
       }
     }, { status: 201 })
   } catch (error) {

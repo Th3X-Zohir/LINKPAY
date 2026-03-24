@@ -1,30 +1,82 @@
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
-import { Plus, Link as LinkIcon, CreditCard, TrendingUp, ArrowRight } from 'lucide-react'
+import { Plus, Link as LinkIcon, CreditCard, TrendingUp, ArrowRight, Loader2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
-export default async function DashboardPage() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    redirect('/login')
+interface DashboardData {
+  totalEarnings: number
+  totalLinks: number
+  totalTransactions: number
+  recentTransactions: Array<{
+    id: string
+    amount: number
+    netAmount: number
+    platformFee: number
+    gatewayFee: number
+    createdAt: string
+    paymentLink: {
+      description: string
+    }
+  }>
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [])
+
+  async function fetchDashboard() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/users/me/analytics')
+      const result = await res.json()
+      if (result.success) {
+        setData(result.data)
+      } else {
+        setError(result.error || 'Failed to fetch dashboard data')
+      }
+    } catch (err) {
+      setError('Failed to fetch dashboard data')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const [paymentLinks, transactions, recentTransactions] = await Promise.all([
-    db.paymentLink.count({ where: { userId: session.user.id } }),
-    db.transaction.count({ where: { userId: session.user.id } }),
-    db.transaction.findMany({
-      where: { userId: session.user.id, status: 'SUCCESS' },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      include: { paymentLink: true }
-    })
-  ])
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
-  const totalEarnings = recentTransactions.reduce((sum, t) => sum + t.netAmount, 0)
+  if (error || !data) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-600">Welcome back! Here&apos;s your overview.</p>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-red-600">{error || 'Failed to load dashboard'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const stats = data
 
   return (
     <div className="space-y-8">
@@ -47,8 +99,8 @@ export default async function DashboardPage() {
             <TrendingUp className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalEarnings)}</div>
-            <p className="text-xs text-slate-500">From {transactions} transactions</p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
+            <p className="text-xs text-slate-500">From {stats.totalTransactions} transactions</p>
           </CardContent>
         </Card>
 
@@ -58,7 +110,7 @@ export default async function DashboardPage() {
             <LinkIcon className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{paymentLinks}</div>
+            <div className="text-2xl font-bold">{stats.totalLinks}</div>
             <p className="text-xs text-slate-500">Created links</p>
           </CardContent>
         </Card>
@@ -69,7 +121,7 @@ export default async function DashboardPage() {
             <CreditCard className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{transactions}</div>
+            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
             <p className="text-xs text-slate-500">Total transactions</p>
           </CardContent>
         </Card>
@@ -83,7 +135,7 @@ export default async function DashboardPage() {
           </Link>
         </CardHeader>
         <CardContent>
-          {recentTransactions.length === 0 ? (
+          {stats.recentTransactions.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No transactions yet</p>
@@ -91,7 +143,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {recentTransactions.map((tx) => (
+              {stats.recentTransactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between py-3 border-b last:border-0">
                   <div>
                     <p className="font-medium">{tx.paymentLink.description}</p>

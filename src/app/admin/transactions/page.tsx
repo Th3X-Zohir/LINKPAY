@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface Transaction {
   id: string
@@ -208,5 +209,3 @@ export default function AdminTransactionsPage() {
     </div>
   )
 }
-
-import { Button } from '@/components/ui/button'
