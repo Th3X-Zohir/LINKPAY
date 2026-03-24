@@ -13,8 +13,10 @@ import {
   BarChart3,
   Settings,
   ExternalLink,
-  Shield
+  Shield,
+  MoreHorizontal
 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 function SidebarLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
   const pathname = usePathname()
@@ -53,7 +55,7 @@ export function SidebarNav() {
   }, [])
 
   return (
-    <aside className="w-64 bg-white border-r min-h-[calc(100vh-57px)] sticky top-[57px] hidden md:block">
+    <aside className="w-64 bg-white border-r min-h-screen sticky top-0 hidden md:block">
       <nav className="p-4 space-y-1">
         <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
         <SidebarLink href="/dashboard/links" icon={LinkIcon} label="Payment Links" />
@@ -90,38 +92,72 @@ export function SidebarNav() {
   )
 }
 
+// Mobile navigation items
+const mobileNavItems = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+  { href: '/dashboard/links', icon: LinkIcon, label: 'Links' },
+  { href: '/dashboard/transactions', icon: CreditCard, label: 'Txns' },
+  { href: '/dashboard/payouts', icon: Wallet, label: 'Payouts' },
+]
+
+const moreNavItems = [
+  { href: '/dashboard/documents', icon: FileText, label: 'Documents' },
+  { href: '/dashboard/disputes', icon: MessageSquare, label: 'Disputes' },
+  { href: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
+]
+
 export function MobileNav() {
   const pathname = usePathname()
 
-  const links = [
-    { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-    { href: '/dashboard/links', icon: LinkIcon, label: 'Links' },
-    { href: '/dashboard/transactions', icon: CreditCard, label: 'Txns' },
-    { href: '/dashboard/payouts', icon: Wallet, label: 'Payouts' },
-    { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
-  ]
-
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50">
-      <nav className="flex justify-around p-2">
-        {links.map((link) => {
-          const Icon = link.icon
-          const isActive = pathname === link.href || (link.href !== '/dashboard' && pathname.startsWith(link.href))
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50 pb-safe">
+      <nav className="flex justify-around items-center py-2">
+        {mobileNavItems.map((item) => {
+          const Icon = item.icon
+          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
 
           return (
             <Link
-              key={link.href}
-              href={link.href}
-              className={`flex flex-col items-center gap-1 px-3 py-2 text-xs ${
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center gap-1 px-3 py-2 text-xs min-w-[64px] ${
                 isActive ? 'text-blue-600' : 'text-slate-600'
               }`}
               aria-current={isActive ? 'page' : undefined}
             >
               <Icon className="w-5 h-5" />
-              <span>{link.label}</span>
+              <span>{item.label}</span>
             </Link>
           )
         })}
+
+        {/* More dropdown for additional items */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Link
+              href="#"
+              className="flex flex-col items-center gap-1 px-3 py-2 text-xs min-w-[64px] text-slate-600 hover:text-blue-600 transition-colors"
+              aria-label="More options"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+              <span>More</span>
+            </Link>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="mb-2">
+            {moreNavItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <DropdownMenuItem key={item.href} asChild>
+                  <Link href={item.href} className="flex items-center gap-2">
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </nav>
     </div>
   )

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { formatCurrency } from '@/lib/utils'
-import { CreditCard, Smartphone, ShieldCheck, Clock, Loader2 } from 'lucide-react'
+import { CreditCard, Smartphone, ShieldCheck, Clock, Loader2, Building2, MapPin } from 'lucide-react'
+import Image from 'next/image'
 
 interface PaymentFormProps {
   paymentLink: {
@@ -18,6 +19,9 @@ interface PaymentFormProps {
       id: string
       name: string | null
       email: string
+      businessName?: string | null
+      businessAddress?: string | null
+      businessLogo?: string | null
     }
   }
 }
@@ -27,6 +31,10 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
   const [error, setError] = useState('')
   const appUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
   const initiateUrl = `${appUrl}/api/public/pay/init`
+
+  // Use business branding if available, otherwise fall back to user info
+  const sellerName = paymentLink.user.businessName || paymentLink.user.name || 'Freelancer'
+  const hasCustomBranding = paymentLink.user.businessName || paymentLink.user.businessLogo
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -62,15 +70,46 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
+      {/* Header with Business Branding */}
       <header className="bg-white border-b border-slate-200 px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">LP</span>
+          {hasCustomBranding ? (
+            // Custom business branding
+            <div className="flex items-center gap-3">
+              {paymentLink.user.businessLogo ? (
+                <div className="w-10 h-10 relative rounded-lg overflow-hidden">
+                  <Image
+                    src={paymentLink.user.businessLogo}
+                    alt={sellerName}
+                    fill
+                    className="object-contain"
+                    unoptimized={paymentLink.user.businessLogo.startsWith('http')}
+                  />
+                </div>
+              ) : (
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+              )}
+              <div>
+                <span className="font-semibold text-slate-900 block">{sellerName}</span>
+                {paymentLink.user.businessAddress && (
+                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {paymentLink.user.businessAddress}
+                  </span>
+                )}
+              </div>
             </div>
-            <span className="font-semibold text-slate-900">LinkPay BD</span>
-          </div>
+          ) : (
+            // Default LinkPay branding
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">LP</span>
+              </div>
+              <span className="font-semibold text-slate-900">LinkPay BD</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -78,12 +117,35 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
       <main className="max-w-lg mx-auto px-4 py-8">
         {/* Payment Details Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
-          {/* Card Header */}
+          {/* Card Header with Seller Info */}
           <div className="bg-blue-600 px-6 py-4">
             <p className="text-blue-100 text-sm font-medium">Payment Request From</p>
-            <h1 className="text-white text-xl font-bold mt-1">
-              {paymentLink.user.name || 'Freelancer'}
-            </h1>
+            <div className="flex items-center gap-3 mt-2">
+              {paymentLink.user.businessLogo ? (
+                <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-white">
+                  <Image
+                    src={paymentLink.user.businessLogo}
+                    alt={sellerName}
+                    fill
+                    className="object-contain p-1"
+                    unoptimized={paymentLink.user.businessLogo.startsWith('http')}
+                  />
+                </div>
+              ) : (
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+              )}
+              <div>
+                <h1 className="text-white text-xl font-bold">{sellerName}</h1>
+                {paymentLink.user.businessAddress && (
+                  <p className="text-blue-200 text-xs flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {paymentLink.user.businessAddress}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Amount */}
@@ -181,6 +243,15 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
             </div>
           </div>
         </div>
+
+        {/* Seller Contact Info (if available) */}
+        {paymentLink.user.businessAddress && (
+          <div className="mt-6 text-center">
+            <p className="text-xs text-slate-400">
+              Payment secured by LinkPay BD • {sellerName}
+            </p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-8 text-center">
