@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
 import { Search, ChevronLeft, ChevronRight, UserCheck, UserX } from 'lucide-react'
 
 interface User {
@@ -30,6 +30,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search])
 
   async function fetchUsers() {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Share2, Copy, Check, MessageCircle, Mail, ExternalLink, QrCode } from 'lucide-react'
+import { Share2, Copy, Check, MessageCircle, Mail, ExternalLink } from 'lucide-react'
 
 interface ShareMenuProps {
   url: string

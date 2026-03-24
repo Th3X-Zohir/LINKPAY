@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
-import { User, Phone, Wallet, Building, Hash, Save, CheckCircle } from 'lucide-react'
+import { User, Wallet, Building, Save, CheckCircle } from 'lucide-react'
 
 export default function SettingsPage() {
   const { data: session } = useSession()

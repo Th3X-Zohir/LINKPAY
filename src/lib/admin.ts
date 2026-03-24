@@ -14,7 +14,7 @@ export async function requireAdmin() {
   const isUserAdmin = await isAdmin()
   if (!isUserAdmin) {
     return NextResponse.json(
-      { success: false, error: { code: 'FORBIDDEN', message: 'Admin access required' } },
+      { success: false, error: 'Admin access required' },
       { status: 403 }
     )
   }

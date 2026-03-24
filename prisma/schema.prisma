@@ -33,9 +33,12 @@ enum TransactionStatus {
 
 enum PayoutStatus {
   PENDING
+  APPROVED
   PROCESSING
   COMPLETED
   FAILED
+  REJECTED
+  CANCELLED
 }
 
 enum PayoutMethod {
@@ -58,24 +61,38 @@ enum AuditAction {
   PAYOUT_INITIATED
   PAYOUT_COMPLETED
   PAYOUT_FAILED
+  PAYOUT_APPROVED
+  PAYOUT_REJECTED
+  ADMIN_PLAN_CHANGED
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  LOGIN_BLOCKED
+  LOGIN_FAILED
+  LOGIN_ATTEMPTS_RESET
+  AUDIT_LOG_CLEANUP
 }
 
 // ============ MODELS ============
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String?
-  name          String?
-  phone         String?   @unique
-  bkashNumber   String?
-  bankAccount   String?
-  bankName      String?
-  bankRouting   String?
-  plan          Plan      @default(FREE)
-  nid           String?
-  tin           String?
-  emailVerified DateTime?
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String?
+  name                String?
+  phone               String?   @unique
+  bkashNumber         String?
+  bankAccount         String?
+  bankName            String?
+  bankRouting         String?
+  plan                Plan      @default(FREE)
+  isAdmin             Boolean   @default(false)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  nid                 String?   @db.Text   // Encrypted at application level using AES-256-GCM
+  tin                 String?   @db.Text   // Encrypted at application level using AES-256-GCM
+  emailVerified       DateTime?
+  bkashVerified Boolean   @default(false)
+  bankVerified  Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -84,9 +101,12 @@ model User {
   payouts       Payout[]
   auditLogs     AuditLog[]
   sessions      Session[]
+  invoices      Invoice[]
+  pendingSubscriptions PendingSubscription[]
 
   @@index([email])
   @@index([phone])
+  @@index([isAdmin])
 }
 
 model Session {
@@ -163,6 +183,8 @@ model Payout {
   bankTxnId   String?
   processedAt DateTime?
   failureMsg  String?
+  approvedBy  String?
+  approvedAt  DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -200,4 +222,40 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  userId      String
+  transactionId String?
+  invoiceNumber String @unique
+  pdfUrl      String?
+  status      String   @default("PENDING")
+  amount      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([invoiceNumber])
+}
+
+model PendingSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  plan        Plan
+  amount      Int
+  status      String   @default("PENDING")
+  aamarPayId  String?
+  expiresAt   DateTime
+  activatedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([aamarPayId])
+  @@index([status])
 }

@@ -64,6 +64,7 @@ export default function PaymentLinkDetailPage() {
 
   useEffect(() => {
     fetchPaymentLink()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id])
 
   async function fetchPaymentLink() {
@@ -180,7 +181,7 @@ export default function PaymentLinkDetailPage() {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-slate-900 mb-2">Payment Link Not Found</h2>
-        <p className="text-slate-500 mb-4">This payment link may have been deleted or you don't have access.</p>
+        <p className="text-slate-500 mb-4">This payment link may have been deleted or you don&apos;t have access.</p>
         <Link href="/dashboard/links">
           <Button>Back to Links</Button>
         </Link>

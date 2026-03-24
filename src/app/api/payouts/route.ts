@@ -3,8 +3,10 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { requestPayoutSchema } from '@/lib/validators'
 import { initiateBkashPayout } from '@/lib/api/bkash'
+import { checkRateLimit, RateLimits, createRateLimitHeaders } from '@/lib/rate-limit'
+import { createAuditLog } from '@/lib/audit'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -38,12 +40,29 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown'
+  const userAgent = request.headers.get('user-agent') || undefined
 
+  // Apply rate limiting - 5 requests per minute per user
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const rateLimitKey = `payout:${session.user.id}`
+  if (!checkRateLimit(rateLimitKey, RateLimits.PAYOUT_REQUEST.limit, RateLimits.PAYOUT_REQUEST.windowMs)) {
+    return NextResponse.json(
+      { error: 'Too many payout requests. Please try again later.' },
+      {
+        status: 429,
+        headers: createRateLimitHeaders(rateLimitKey, RateLimits.PAYOUT_REQUEST.limit),
+      }
+    )
+  }
+
+  try {
     const body = await request.json()
     const parsed = requestPayoutSchema.safeParse(body)
 
@@ -122,12 +141,17 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      await db.auditLog.create({
-        data: {
-          userId: session.user.id,
-          action: 'PAYOUT_INITIATED',
-          details: { payoutId: payout.id, amount, method: 'BKASH' }
-        }
+      await createAuditLog({
+        action: 'PAYOUT_INITIATED',
+        userId: session.user.id,
+        metadata: {
+          payoutId: payout.id,
+          amount,
+          method: 'BKASH',
+          bkashTxnId: payoutResult.trxId,
+        },
+        ipAddress: clientIp,
+        userAgent,
       })
 
       return NextResponse.json({

@@ -1,154 +1,138 @@
+import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { db } from '@/lib/db'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { ExternalLink, Calendar, User } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
+import { CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { PaymentForm } from './PaymentForm'
 
 interface PaymentPageProps {
   params: Promise<{ shareUrl: string }>
 }
 
-export default async function PaymentPage({ params }: PaymentPageProps) {
+export async function generateMetadata({ params }: PaymentPageProps): Promise<Metadata> {
   const { shareUrl } = await params
-
+  
   const paymentLink = await db.paymentLink.findUnique({
     where: { shareUrl },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true
-        }
-      }
-    }
+    include: { user: true }
   })
+  
+  if (!paymentLink) {
+    return { title: 'Payment Link Not Found | LinkPay BD' }
+  }
+  
+  return {
+    title: `Pay ${formatCurrency(paymentLink.amount)} to ${paymentLink.user.name || 'Freelancer'} | LinkPay BD`,
+    description: paymentLink.description
+  }
+}
 
+export default async function PaymentPage({ params }: PaymentPageProps) {
+  const { shareUrl } = await params
+  
+  const paymentLink = await db.paymentLink.findUnique({
+    where: { shareUrl },
+    include: { user: true }
+  })
+  
   if (!paymentLink) {
     notFound()
   }
-
-  if (paymentLink.status === 'CANCELLED') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="py-12">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">❌</span>
-            </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Payment Cancelled</h1>
-            <p className="text-slate-600">This payment link has been cancelled.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
+  
+  // Handle different link statuses
   if (paymentLink.status === 'PAID') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="py-12">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">✅</span>
-            </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Already Paid</h1>
-            <p className="text-slate-600">This payment has already been completed.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <PaymentAlreadyPaid paymentLink={paymentLink} />
   }
-
-  if (paymentLink.expiresAt && new Date() > paymentLink.expiresAt) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="py-12">
-            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">⏰</span>
-            </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Payment Expired</h1>
-            <p className="text-slate-600">This payment link has expired.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  
+  if (paymentLink.status === 'EXPIRED' || (paymentLink.expiresAt && new Date(paymentLink.expiresAt) < new Date())) {
+    return <PaymentExpired paymentLink={paymentLink} />
   }
-
-  const handlePay = async () => {
-    if (paymentLink.aamarPayUrl) {
-      window.location.href = paymentLink.aamarPayUrl
-    }
+  
+  if (paymentLink.status === 'CANCELLED') {
+    return <PaymentCancelled />
   }
+  
+  // PENDING - Show payment form
+  return <PaymentForm paymentLink={paymentLink} />
+}
 
+function PaymentAlreadyPaid({ paymentLink }: { paymentLink: { shareUrl: string; amount: number; description: string; paidAt: Date | null; user: { name: string | null } } }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold">LP</span>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Payment Request</h1>
-          <p className="text-slate-600">via LinkPay BD</p>
+          
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Already Completed</h1>
+          
+          <p className="text-slate-600 mb-6">
+            This payment link has already been paid.
+          </p>
+          
+          <div className="bg-slate-50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-slate-500 mb-1">Amount Paid</p>
+            <p className="text-3xl font-bold text-slate-900">{formatCurrency(paymentLink.amount)}</p>
+          </div>
+          
+          <p className="text-sm text-slate-500">
+            Paid on {paymentLink.paidAt ? new Date(paymentLink.paidAt).toLocaleDateString('en-BD', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }) : 'N/A'}
+          </p>
         </div>
+      </div>
+    </div>
+  )
+}
 
-        <Card>
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-between">
-              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                Pending Payment
-              </Badge>
-              <div className="flex items-center gap-1 text-sm text-slate-500">
-                <Calendar className="w-4 h-4" />
-                {formatDate(paymentLink.createdAt)}
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold text-blue-600">
-              {formatCurrency(paymentLink.amount)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-slate-700 font-medium">{paymentLink.description}</p>
-              {paymentLink.customerName && (
-                <div className="flex items-center gap-2 text-slate-600">
-                  <User className="w-4 h-4" />
-                  {paymentLink.customerName}
-                </div>
-              )}
-            </div>
+function PaymentExpired({ paymentLink }: { paymentLink: { shareUrl: string; amount: number; description: string; user: { name: string | null } } }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-8 h-8 text-amber-600" />
+          </div>
+          
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Link Expired</h1>
+          
+          <p className="text-slate-600 mb-6">
+            This payment link has expired. Please contact the freelancer for a new link.
+          </p>
+          
+          <div className="bg-slate-50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-slate-500 mb-1">Original Amount</p>
+            <p className="text-2xl font-bold text-slate-700">{formatCurrency(paymentLink.amount)}</p>
+          </div>
+          
+          <p className="text-sm text-slate-500">
+            For: {paymentLink.user.name || 'Freelancer'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-            <div className="border-t pt-4">
-              <p className="text-sm text-slate-500 mb-2">Payment for</p>
-              <p className="font-medium">{paymentLink.user.name || 'Freelancer'}</p>
-            </div>
+function PaymentCancelled() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Cancelled</h1>
 
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handlePay}
-              disabled={!paymentLink.aamarPayUrl}
-            >
-              {paymentLink.aamarPayUrl ? (
-                <>
-                  Pay Now <ExternalLink className="w-4 h-4 ml-2" />
-                </>
-              ) : (
-                'Payment processing...'
-              )}
-            </Button>
-
-            <p className="text-xs text-center text-slate-500">
-              Secure payment via aamarPay. Accepts Visa, Mastercard, bKash.
-            </p>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-sm text-slate-500 mt-8">
-          Powered by <span className="font-medium text-blue-600">LinkPay BD</span>
-        </p>
+          <p className="text-slate-600 mb-6">
+            This payment link has been cancelled by the freelancer.
+          </p>
+        </div>
       </div>
     </div>
   )

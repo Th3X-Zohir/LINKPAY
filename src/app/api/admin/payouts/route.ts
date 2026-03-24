@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { PayoutStatus } from '@prisma/client'
 
 const querySchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -18,10 +19,7 @@ export async function GET(request: NextRequest) {
     const params = querySchema.parse(Object.fromEntries(searchParams))
     const skip = (params.page - 1) * params.limit
 
-    const where: any = {}
-    if (params.status) {
-      where.status = params.status
-    }
+    const where = params.status ? { status: params.status } : {}
 
     const [payouts, total] = await Promise.all([
       db.payout.findMany({
@@ -90,8 +88,8 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const updateData: any = {
-      status: parsed.data.status
+    const updateData: { status: PayoutStatus; processedAt?: Date; bkashTxnId?: string; failureReason?: string } = {
+      status: parsed.data.status as PayoutStatus
     }
 
     if (parsed.data.status === 'COMPLETED') {

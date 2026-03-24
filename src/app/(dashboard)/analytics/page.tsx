@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { TrendingUp, TrendingDown, CreditCard, Link as LinkIcon, DollarSign, Percent } from 'lucide-react'
+import { TrendingUp, CreditCard, Link as LinkIcon, DollarSign, Percent } from 'lucide-react'
 
 export default async function AnalyticsPage() {
   const session = await auth()
@@ -11,7 +11,7 @@ export default async function AnalyticsPage() {
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-  const [paymentLinks, transactions, recentTransactions] = await Promise.all([
+  const [paymentLinks, , recentTransactions] = await Promise.all([
     db.paymentLink.count({ where: { userId: session.user.id } }),
     db.transaction.findMany({
       where: {
@@ -43,7 +43,6 @@ export default async function AnalyticsPage() {
 
   const totalEarnings = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.netAmount, 0)
   const totalAmount = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.amount, 0)
-  const totalFees = typedRecentTransactions.reduce((sum: number, t: TxSummary) => sum + t.platformFee + t.gatewayFee, 0)
 
   const dailyEarnings: Record<string, number> = {}
   typedRecentTransactions.forEach((t: TxSummary) => {
@@ -159,7 +158,7 @@ export default async function AnalyticsPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {chartData.slice(-7).reverse().map((day, i) => (
+                {chartData.slice(-7).reverse().map((day) => (
                   <div key={day.date} className="flex items-center gap-4">
                     <span className="text-sm text-slate-500 w-20">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}

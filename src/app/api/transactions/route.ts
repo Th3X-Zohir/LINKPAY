@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { TransactionStatus } from '@prisma/client'
 
 const querySchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -23,9 +24,9 @@ export async function GET(request: NextRequest) {
     const params = querySchema.parse(Object.fromEntries(searchParams))
     const skip = (params.page - 1) * params.limit
 
-    const where: any = { userId: session.user.id }
+    const where: { userId: string; status?: TransactionStatus } = { userId: session.user.id }
     if (params.status) {
-      where.status = params.status
+      where.status = params.status as TransactionStatus
     }
 
     const [transactions, total] = await Promise.all([

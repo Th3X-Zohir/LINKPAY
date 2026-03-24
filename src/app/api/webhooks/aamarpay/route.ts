@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { verifyWebhookSignature } from '@/lib/api/aamarPay'
 import { sendPaymentReceivedEmail } from '@/lib/email'
+import { createAuditLog } from '@/lib/audit'
 
 interface AamarPayWebhookPayload {
   status: string
@@ -22,6 +23,10 @@ interface AamarPayWebhookPayload {
 }
 
 export async function POST(request: NextRequest) {
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown'
+
   try {
     const payload: AamarPayWebhookPayload = await request.json()
     const signature = request.headers.get('x-aamarpay-signature')
@@ -67,29 +72,48 @@ export async function POST(request: NextRequest) {
       const gatewayFee = Math.round(amount * 0.0255)
       const netAmount = amount - platformFee - gatewayFee
 
-      await db.paymentLink.update({
-        where: { id: paymentLink.id },
-        data: {
-          status: 'PAID',
-          paidAt: new Date()
-        }
+      // Atomic transaction: update PaymentLink and create Transaction together
+      const transaction = await db.$transaction(async (tx) => {
+        await tx.paymentLink.update({
+          where: { id: paymentLink.id },
+          data: {
+            status: 'PAID',
+            paidAt: new Date()
+          }
+        })
+
+        return tx.transaction.create({
+          data: {
+            paymentLinkId: paymentLink.id,
+            userId: paymentLink.userId,
+            amount,
+            platformFee,
+            gatewayFee,
+            netAmount,
+            status: 'SUCCESS',
+            aamarPayTxnId: payload.trx_id || payload.payment_id,
+            aamarPayFees: JSON.stringify({
+              platform: platformFee,
+              gateway: gatewayFee
+            })
+          }
+        })
       })
 
-      const transaction = await db.transaction.create({
-        data: {
+      // Log successful payment
+      await createAuditLog({
+        action: 'TRANSACTION_SUCCESS',
+        userId: paymentLink.userId,
+        metadata: {
+          transactionId: transaction.id,
           paymentLinkId: paymentLink.id,
-          userId: paymentLink.userId,
           amount,
+          netAmount,
           platformFee,
           gatewayFee,
-          netAmount,
-          status: 'SUCCESS',
           aamarPayTxnId: payload.trx_id || payload.payment_id,
-          aamarPayFees: JSON.stringify({
-            platform: platformFee,
-            gateway: gatewayFee
-          })
-        }
+        },
+        ipAddress: clientIp,
       })
 
       // Send email notification
@@ -111,11 +135,32 @@ export async function POST(request: NextRequest) {
           action: 'TRANSACTION_SUCCESS',
           details: {
             paymentLinkId: paymentLink.id,
+            transactionId: transaction.id,
             amount,
             netAmount
           }
         }
       })
+    } else if (payload.status === 'failed' || payload.status === 'Failed' || payload.status === 'fail') {
+      // Handle failed payment
+      const paymentLink = await db.paymentLink.findFirst({
+        where: { aamarPayId: payload.payment_id },
+        include: { user: true }
+      })
+
+      if (paymentLink) {
+        await db.auditLog.create({
+          data: {
+            userId: paymentLink.userId,
+            action: 'TRANSACTION_FAILED',
+            details: {
+              paymentLinkId: paymentLink.id,
+              aamarPayId: payload.payment_id,
+              reason: payload.bank_status || 'Payment failed'
+            }
+          }
+        })
+      }
     }
 
     return NextResponse.json({ message: 'Webhook processed successfully' })

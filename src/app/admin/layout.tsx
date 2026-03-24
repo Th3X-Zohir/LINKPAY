@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import Link from 'next/link'
-import { LayoutDashboard, Users, CreditCard, Wallet, BarChart3, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, Wallet, BarChart3, LogOut, FileText } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -23,6 +23,7 @@ export default async function AdminLayout({
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/transactions', label: 'Transactions', icon: CreditCard },
     { href: '/admin/payouts', label: 'Payouts', icon: Wallet },
+    { href: '/admin/audit-logs', label: 'Audit Logs', icon: FileText },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   ]
 

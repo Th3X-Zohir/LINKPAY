@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { Plan } from '@prisma/client'
 
 const querySchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const params = querySchema.parse(Object.fromEntries(searchParams))
     const skip = (params.page - 1) * params.limit
 
-    const where: any = {}
+    const where: { OR?: object[]; plan?: Plan } = {}
     if (params.search) {
       where.OR = [
         { email: { contains: params.search, mode: 'insensitive' } },
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       ]
     }
     if (params.plan) {
-      where.plan = params.plan
+      where.plan = params.plan as Plan
     }
 
     const [users, total] = await Promise.all([
@@ -58,7 +59,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: users.map(u => ({
-        ...u,
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        phone: u.phone,
+        plan: u.plan,
+        bkashNumber: u.bkashNumber,
+        createdAt: u.createdAt,
         paymentLinksCount: u._count.paymentLinks,
         transactionsCount: u._count.transactions
       })),

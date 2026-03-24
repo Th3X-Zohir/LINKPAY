@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,12 +37,12 @@ interface Payout {
 
 export default function PayoutDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const [payout, setPayout] = useState<Payout | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchPayout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id])
 
   async function fetchPayout() {
@@ -116,7 +116,7 @@ export default function PayoutDetailPage() {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-slate-900 mb-2">Payout Not Found</h2>
-        <p className="text-slate-500 mb-4">This payout may not exist or you don't have access.</p>
+        <p className="text-slate-500 mb-4">This payout may not exist or you don&apos;t have access.</p>
         <Link href="/dashboard/payouts">
           <Button>Back to Payouts</Button>
         </Link>

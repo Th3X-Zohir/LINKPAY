@@ -47,6 +47,7 @@ export default function TransactionDetailPage() {
 
   useEffect(() => {
     fetchTransaction()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id])
 
   async function fetchTransaction() {
@@ -129,7 +130,7 @@ export default function TransactionDetailPage() {
     return (
       <div className="text-center py-12">
         <h2 className="text-xl font-semibold text-slate-900 mb-2">Transaction Not Found</h2>
-        <p className="text-slate-500 mb-4">This transaction may not exist or you don't have access.</p>
+        <p className="text-slate-500 mb-4">This transaction may not exist or you don&apos;t have access.</p>
         <Link href="/dashboard/transactions">
           <Button>Back to Transactions</Button>
         </Link>

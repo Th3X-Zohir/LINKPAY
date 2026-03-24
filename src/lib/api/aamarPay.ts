@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 const AAMARPAY_URL = process.env.AAMARPAY_URL || 'https://sandbox.aamarpay.com'
 const STORE_ID = process.env.AAMARPAY_STORE_ID
 const SIGNATURE_KEY = process.env.AAMARPAY_SIGNATURE_KEY
@@ -90,7 +92,6 @@ export async function verifyAamarPayPayment(paymentId: string): Promise<boolean>
 export function verifyWebhookSignature(payload: unknown, signature: string | null): boolean {
   if (!signature || !SIGNATURE_KEY) return false
   
-  const crypto = require('crypto')
   const expectedSignature = crypto
     .createHmac('sha256', SIGNATURE_KEY)
     .update(JSON.stringify(payload))

@@ -8,7 +8,8 @@ interface SuccessPageProps {
 }
 
 export default async function PaymentSuccessPage({ params }: SuccessPageProps) {
-  const { shareUrl } = await params
+  await params // Await params to satisfy TypeScript
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">

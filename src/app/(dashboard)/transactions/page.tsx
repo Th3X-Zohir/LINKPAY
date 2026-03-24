@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight } from 'lucide-react'
+import { InvoiceActions } from './InvoiceActions'
 
 export default async function TransactionsPage() {
   const session = await auth()
@@ -12,7 +13,13 @@ export default async function TransactionsPage() {
     where: { userId: session.user.id },
     orderBy: { createdAt: 'desc' },
     include: {
-      paymentLink: true
+      paymentLink: true,
+      user: {
+        select: {
+          plan: true,
+          email: true
+        }
+      }
     }
   })
 
@@ -94,6 +101,7 @@ export default async function TransactionsPage() {
                     <th className="pb-3 font-medium">Fees</th>
                     <th className="pb-3 font-medium">Net</th>
                     <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium">Invoice</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -122,6 +130,14 @@ export default async function TransactionsPage() {
                           {getStatusIcon(tx.status)}
                           <span className="capitalize">{tx.status.toLowerCase()}</span>
                         </div>
+                      </td>
+                      <td className="py-4">
+                        {tx.status === 'SUCCESS' && (
+                          <InvoiceActions 
+                            transactionId={tx.id} 
+                            customerEmail={tx.paymentLink.customerEmail || tx.user.email}
+                          />
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -18,7 +18,6 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isOnDashboard = nextUrl.pathname.startsWith('/dashboard')
-      const isOnApi = nextUrl.pathname.startsWith('/api')
 
       if (isOnDashboard) {
         if (isLoggedIn) return true

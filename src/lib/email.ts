@@ -111,3 +111,72 @@ export async function sendPayoutProcessedEmail(data: PayoutProcessedEmailData) {
     return { success: false, error }
   }
 }
+
+interface PlanChangeEmailData {
+  to: string
+  userName: string
+  newPlan: 'FREE' | 'PREMIUM'
+  previousPlan: 'FREE' | 'PREMIUM'
+}
+
+export async function sendPlanChangeEmail(data: PlanChangeEmailData) {
+  try {
+    const { to, userName, newPlan, previousPlan } = data
+    const isUpgrade = newPlan === 'PREMIUM'
+
+    await resend.emails.send({
+      from: 'LinkPay BD <noreply@linkpaybd.com>',
+      to,
+      subject: isUpgrade 
+        ? '🎉 Welcome to LinkPay Premium!' 
+        : 'LinkPay Plan Changed',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #0A1628; padding: 24px; text-align: center;">
+            <h1 style="color: white; margin: 0;">LinkPay BD</h1>
+          </div>
+          <div style="padding: 24px;">
+            <h2 style="color: ${isUpgrade ? '#059669' : '#64748b'};">
+              ${isUpgrade ? 'Welcome to Premium! 🎉' : 'Your Plan Has Been Updated'}
+            </h2>
+            <p>Hi ${userName},</p>
+            ${isUpgrade 
+              ? '<p>Congratulations! Your account has been upgraded to Premium.</p>'
+              : `<p>Your LinkPay plan has been changed from <strong>${previousPlan}</strong> to <strong>${newPlan}</strong>.</p>`
+            }
+
+            ${isUpgrade ? `
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 12px; margin: 24px 0; text-align: center;">
+              <p style="margin: 0; font-size: 24px;">✨ Premium Benefits Active</p>
+            </div>
+
+            <ul style="text-align: left; padding-left: 20px;">
+              <li style="margin-bottom: 8px;">✓ Unlimited payment links</li>
+              <li style="margin-bottom: 8px;">✓ Custom branded invoices</li>
+              <li style="margin-bottom: 8px;">✓ Priority 24/7 support</li>
+              <li style="margin-bottom: 8px;">✓ Advanced analytics</li>
+              <li style="margin-bottom: 8px;">✓ No platform fee watermark</li>
+            </ul>
+            ` : `
+            <p>If you have any questions about your new plan, please contact our support team.</p>
+            `}
+
+            <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard"
+               style="display: inline-block; background: ${isUpgrade ? '#2563eb' : '#64748b'}; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin-top: 16px;">
+              Go to Dashboard
+            </a>
+          </div>
+          <div style="background: #f1f5f9; padding: 16px; text-align: center; font-size: 12px; color: #64748b;">
+            <p>LinkPay BD - Payment Links for Bangladeshi Freelancers</p>
+          </div>
+        </div>
+      `
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Email send error:', error)
+    return { success: false, error }
+  }
+}
+

@@ -50,6 +50,7 @@ export default function AdminPayoutsPage() {
 
   useEffect(() => {
     fetchPayouts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, status])
 
   async function fetchPayouts() {
@@ -263,7 +264,7 @@ export default function AdminPayoutsPage() {
               <Label>Status</Label>
               <select
                 value={updateStatus}
-                onChange={(e) => setUpdateStatus(e.target.value as any)}
+                onChange={(e) => setUpdateStatus(e.target.value as 'PROCESSING' | 'COMPLETED' | 'FAILED')}
                 className="w-full px-3 py-2 border rounded-md"
               >
                 <option value="PROCESSING">Processing</option>

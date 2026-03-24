@@ -31,6 +31,7 @@ export default function AdminTransactionsPage() {
 
   useEffect(() => {
     fetchTransactions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, status])
 
   async function fetchTransactions() {
