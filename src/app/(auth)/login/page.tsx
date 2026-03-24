@@ -224,7 +224,7 @@ export default function LoginPage() {
         <form onSubmit={loginMethod === 'password' ? handlePasswordLogin : handleOtpLogin}>
           <CardContent className="space-y-4 mt-4">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+              <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
                 {error}
               </div>
             )}
@@ -238,6 +238,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                aria-required="true"
               />
             </div>
 
@@ -251,6 +252,7 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
+                  aria-required="true"
                 />
               </div>
             )}
@@ -268,7 +270,7 @@ export default function LoginPage() {
                     {otpLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending OTP...
+                        Sending...
                       </>
                     ) : (
                       <>
@@ -288,6 +290,7 @@ export default function LoginPage() {
                       value={formData.otp}
                       onChange={(e) => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '') })}
                       required
+                      aria-required="true"
                       className="text-center text-lg tracking-widest"
                     />
                     <p className="text-xs text-slate-500 text-center">
@@ -309,7 +312,7 @@ export default function LoginPage() {
                 {passkeyLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Preparing passkey...
+                    Loading...
                   </>
                 ) : (
                   <>
@@ -324,7 +327,7 @@ export default function LoginPage() {
           <CardFooter className="flex flex-col space-y-4">
             {loginMethod !== 'passkey' && (
               <Button type="submit" className="w-full" disabled={loading || (loginMethod === 'otp' && !otpSent)}>
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? 'Loading...' : 'Sign In'}
               </Button>
             )}
 

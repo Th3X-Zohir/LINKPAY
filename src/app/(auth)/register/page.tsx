@@ -257,6 +257,7 @@ export default function RegisterPage() {
           value={formData.email}
           onChange={(e) => updateFormData('email', e.target.value)}
           required
+          aria-required="true"
         />
         <p className="text-sm text-slate-500">This will be used for login and verification</p>
       </div>
@@ -269,6 +270,7 @@ export default function RegisterPage() {
           value={formData.password}
           onChange={(e) => updateFormData('password', e.target.value)}
           required
+          aria-required="true"
           minLength={6}
         />
       </div>
@@ -281,6 +283,7 @@ export default function RegisterPage() {
           value={formData.confirmPassword}
           onChange={(e) => updateFormData('confirmPassword', e.target.value)}
           required
+          aria-required="true"
           minLength={6}
         />
       </div>
@@ -299,6 +302,7 @@ export default function RegisterPage() {
           value={formData.name}
           onChange={(e) => updateFormData('name', e.target.value)}
           required
+          aria-required="true"
         />
       </div>
       <div className="space-y-2">
@@ -310,6 +314,7 @@ export default function RegisterPage() {
           value={formData.phone}
           onChange={(e) => updateFormData('phone', e.target.value)}
           required
+          aria-required="true"
         />
         <p className="text-sm text-slate-500">Enter your bKash registered number for payouts</p>
       </div>
@@ -370,6 +375,7 @@ export default function RegisterPage() {
           value={formData.bkashNumber}
           onChange={(e) => updateFormData('bkashNumber', e.target.value)}
           required
+          aria-required="true"
         />
         <p className="text-sm text-slate-500">Your earnings will be sent to this number</p>
       </div>
@@ -433,7 +439,7 @@ export default function RegisterPage() {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying...
+              Loading...
             </>
           ) : (
             <>
@@ -465,12 +471,22 @@ export default function RegisterPage() {
         </p>
       </div>
       <div className="space-y-4">
-        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer">
+        <div
+          className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}
+        >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-600">Upload NID Front</p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
         </div>
-        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer">
+        <div
+          className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); } }}
+        >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
           <p className="text-sm text-slate-600">Upload NID Back</p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
@@ -573,7 +589,7 @@ export default function RegisterPage() {
         <form onSubmit={(e) => { e.preventDefault(); handleNext() }}>
           <CardContent className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+              <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
                 {error}
               </div>
             )}
@@ -593,14 +609,14 @@ export default function RegisterPage() {
 
               {currentStep === 'documents' ? (
                 <Button type="button" onClick={handleComplete} disabled={loading}>
-                  {loading ? 'Saving...' : 'Complete Setup'}
+                  {loading ? 'Processing...' : 'Complete Setup'}
                 </Button>
               ) : currentStep === 'verification' ? null : (
                 <Button type="submit" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
+                      Loading...
                     </>
                   ) : (
                     <>

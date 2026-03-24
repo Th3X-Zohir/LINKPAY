@@ -191,6 +191,15 @@ export default function TransactionDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+        <Link href="/dashboard" className="hover:text-slate-700">Dashboard</Link>
+        <span>/</span>
+        <Link href="/dashboard/transactions" className="hover:text-slate-700">Transactions</Link>
+        <span>/</span>
+        <span className="text-slate-900">{transaction.id.substring(0, 8)}...</span>
+      </nav>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -212,7 +221,7 @@ export default function TransactionDetailPage() {
             disabled={downloading}
           >
             <Download className="w-4 h-4 mr-1" />
-            {downloading ? 'Downloading...' : 'Download Invoice'}
+            {downloading ? 'Loading...' : 'Download Invoice'}
           </Button>
           <Button
             variant="outline"

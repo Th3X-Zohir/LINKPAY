@@ -127,6 +127,15 @@ export default function PayoutDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+        <Link href="/dashboard" className="hover:text-slate-700">Dashboard</Link>
+        <span>/</span>
+        <Link href="/dashboard/payouts" className="hover:text-slate-700">Payouts</Link>
+        <span>/</span>
+        <span className="text-slate-900">{payout.id.substring(0, 8)}...</span>
+      </nav>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

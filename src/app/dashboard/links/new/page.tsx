@@ -72,9 +72,14 @@ export default function CreatePaymentLinkPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+              <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
                 {error}
               </div>
+            )}
+            {error && (
+              <Button onClick={() => setError('')} variant="outline" className="mt-2">
+                Try Again
+              </Button>
             )}
 
             <div className="space-y-2">
@@ -88,8 +93,10 @@ export default function CreatePaymentLinkPage() {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 required
+                aria-required="true"
+                aria-describedby="amount-help"
               />
-              <p className="text-sm text-slate-500">
+              <p id="amount-help" className="text-sm text-slate-500">
                 Amount should be between ৳1 and ৳1,00,000
               </p>
             </div>
@@ -103,6 +110,7 @@ export default function CreatePaymentLinkPage() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 required
+                aria-required="true"
               />
               <p className="text-sm text-slate-500">
                 This will appear on the invoice
@@ -145,7 +153,7 @@ export default function CreatePaymentLinkPage() {
 
             <div className="pt-4">
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Payment Link'}
+                {loading ? 'Processing...' : 'Create Payment Link'}
               </Button>
             </div>
           </CardContent>

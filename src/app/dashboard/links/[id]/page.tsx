@@ -194,6 +194,15 @@ export default function PaymentLinkDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm text-slate-500 mb-4">
+        <Link href="/dashboard" className="hover:text-slate-700">Dashboard</Link>
+        <span>/</span>
+        <Link href="/dashboard/links" className="hover:text-slate-700">Links</Link>
+        <span>/</span>
+        <span className="text-slate-900">{paymentLink.description}</span>
+      </nav>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -319,36 +328,36 @@ export default function PaymentLinkDetailPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <a
-                href={`https://wa.me/?text=Pay%20here%3A%20${encodeURIComponent(paymentUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button className="w-full bg-green-600 hover:bg-green-700 gap-2">
+              <Button asChild className="w-full bg-green-600 hover:bg-green-700 gap-2">
+                <a
+                  href={`https://wa.me/?text=Pay%20here%3A%20${encodeURIComponent(paymentUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Share via WhatsApp
-                </Button>
-              </a>
+                </a>
+              </Button>
 
-              <a
-                href={`mailto:?subject=Payment Request&body=Please%20pay%20here%3A%20${encodeURIComponent(paymentUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" className="w-full gap-2">
+              <Button asChild variant="outline" className="w-full gap-2">
+                <a
+                  href={`mailto:?subject=Payment Request&body=Please%20pay%20here%3A%20${encodeURIComponent(paymentUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Share via Email
-                </Button>
-              </a>
+                </a>
+              </Button>
 
-              <a
-                href={paymentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="outline" className="w-full gap-2">
+              <Button asChild variant="outline" className="w-full gap-2">
+                <a
+                  href={paymentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <ExternalLink className="w-4 h-4" />
                   Open Payment Page
-                </Button>
-              </a>
+                </a>
+              </Button>
             </div>
 
             {/* QR Code placeholder */}
@@ -418,7 +427,7 @@ export default function PaymentLinkDetailPage() {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? 'Processing...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

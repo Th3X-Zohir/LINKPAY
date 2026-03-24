@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Link as LinkIcon, CreditCard, TrendingUp, ArrowRight, Loader2 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { DashboardStatsSkeleton, TransactionRowSkeleton } from '@/components/ui/skeleton'
+import { Plus, Link as LinkIcon, CreditCard, TrendingUp, ArrowRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 interface DashboardData {
@@ -59,8 +61,27 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-44" />
+        </div>
+        <DashboardStatsSkeleton />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <TransactionRowSkeleton key={i} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -74,7 +95,12 @@ export default function DashboardPage() {
         </div>
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-red-600">{error || 'Failed to load dashboard'}</p>
+            <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md mb-4">
+              {error || 'Failed to load dashboard'}
+            </div>
+            <Button onClick={fetchDashboard} variant="outline">
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       </div>

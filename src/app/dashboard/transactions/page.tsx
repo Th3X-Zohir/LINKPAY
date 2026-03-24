@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight, Loader2 } from 'lucide-react'
 
@@ -91,7 +92,12 @@ export default function TransactionsPage() {
         </div>
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-red-600">{error}</p>
+            <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md mb-4">
+              {error}
+            </div>
+            <Button onClick={fetchTransactions} variant="outline">
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       </div>

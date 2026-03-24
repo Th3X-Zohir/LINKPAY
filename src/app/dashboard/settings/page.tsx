@@ -6,13 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from 'next-auth/react'
 import { User, Wallet, Building, Save, CheckCircle, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [payoutLoading, setPayoutLoading] = useState(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -56,7 +58,8 @@ export default function SettingsPage() {
 
   const handlePayoutMethodsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setPayoutLoading(true)
+    setProfileLoading(true)
     setError('')
     setSuccess(false)
 
@@ -82,13 +85,15 @@ export default function SettingsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
-      setLoading(false)
+      setPayoutLoading(false)
+      setProfileLoading(false)
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setProfileLoading(true)
+    setPayoutLoading(true)
     setError('')
     setSuccess(false)
 
@@ -113,7 +118,8 @@ export default function SettingsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
-      setLoading(false)
+      setProfileLoading(false)
+      setPayoutLoading(false)
     }
   }
 
@@ -146,15 +152,18 @@ export default function SettingsPage() {
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-lg">
+        <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-lg">
           {error}
         </div>
       )}
 
       {!profileLoaded ? (
         <Card>
-          <CardContent className="p-8 flex items-center justify-center">
-            <div className="animate-pulse text-slate-500">Loading profile...</div>
+          <CardContent className="p-8 space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </CardContent>
         </Card>
       ) : (
@@ -174,6 +183,7 @@ export default function SettingsPage() {
               type="email"
               value={session?.user?.email || ''}
               disabled
+              aria-disabled="true"
               className="bg-slate-50"
             />
           </div>
@@ -259,9 +269,9 @@ export default function SettingsPage() {
             </div>
 
             <div className="pt-4">
-              <Button type="submit" disabled={loading} className="gap-2">
+              <Button type="submit" disabled={payoutLoading || profileLoading} className="gap-2">
                 <Save className="w-4 h-4" />
-                {loading ? 'Saving...' : 'Save Payout Methods'}
+                {payoutLoading ? 'Processing...' : 'Save Payout Methods'}
               </Button>
             </div>
           </CardContent>
@@ -269,9 +279,9 @@ export default function SettingsPage() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={loading} className="gap-2">
+        <Button onClick={handleSubmit} disabled={payoutLoading || profileLoading} className="gap-2">
           <Save className="w-4 h-4" />
-          {loading ? 'Saving...' : 'Save Changes'}
+          {profileLoading ? 'Processing...' : 'Save Changes'}
         </Button>
       </div>
       </>

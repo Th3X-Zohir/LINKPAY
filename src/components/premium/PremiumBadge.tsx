@@ -38,7 +38,7 @@ export function PremiumBadge({ size = 'sm', showTooltip = true }: PremiumBadgePr
           ${sizeClasses[size]}
         `}
       >
-        <Crown className={`${iconSizes[size]} animate-pulse`} />
+        <Crown className={`${iconSizes[size]} text-amber-500`} />
         <span>PREMIUM</span>
       </span>
 

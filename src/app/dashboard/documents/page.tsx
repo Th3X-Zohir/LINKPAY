@@ -145,7 +145,7 @@ export default function DocumentsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+            <div role="alert" className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
               <AlertCircle className="w-4 h-4" />
               {error}
             </div>
@@ -179,6 +179,7 @@ export default function DocumentsPage() {
                 accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx"
                 onChange={handleUpload}
                 disabled={!selectedType || uploading}
+                aria-required="true"
                 className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
@@ -192,7 +193,7 @@ export default function DocumentsPage() {
           {uploading && (
             <div className="flex items-center gap-2 text-sm text-blue-600">
               <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              Uploading...
+              Processing...
             </div>
           )}
         </CardContent>

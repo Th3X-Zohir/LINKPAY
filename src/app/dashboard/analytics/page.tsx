@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { TrendingUp, CreditCard, Link as LinkIcon, DollarSign, Percent, BarChart3 } from 'lucide-react'
 import {
@@ -115,7 +116,12 @@ export default function AnalyticsPage() {
         </div>
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-slate-500">{error || 'No analytics data available'}</p>
+            <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md mb-4">
+              {error || 'No analytics data available'}
+            </div>
+            <Button onClick={fetchAnalytics} variant="outline">
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -231,7 +237,7 @@ export default function AnalyticsPage() {
                     />
                     <YAxis
                       tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `৳${(value / 100).toLocaleString()}`}
+                      tickFormatter={(value) => `৳${Math.round(value / 100).toLocaleString('en-BD')}`}
                     />
                     <Tooltip
                       formatter={(value) => [formatCurrency(Number(value) || 0), 'Earnings']}
