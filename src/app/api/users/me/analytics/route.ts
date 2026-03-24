@@ -83,6 +83,17 @@ export async function GET() {
           paymentLinksCount,
           successRate
         },
+        recentTransactions: recentTransactions.slice(0, 10).map(t => ({
+          id: t.id,
+          amount: t.amount,
+          netAmount: t.netAmount,
+          platformFee: t.platformFee,
+          gatewayFee: t.gatewayFee,
+          createdAt: t.createdAt.toISOString(),
+          paymentLink: {
+            description: t.paymentLink.description
+          }
+        })),
         dailyEarnings: earningsChartData,
         dailyTransactions: transactionChartData,
         topTransactions: transactions.slice(0, 10).map(t => ({

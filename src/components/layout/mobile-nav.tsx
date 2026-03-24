@@ -62,7 +62,7 @@ export function MobileNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg transition-colors min-w-[64px] ${
                   isActive
                     ? 'text-blue-600'
                     : 'text-slate-500 hover:text-slate-700'

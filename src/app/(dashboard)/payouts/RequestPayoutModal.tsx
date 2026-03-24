@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2, Wallet, AlertCircle } from 'lucide-react'
 
@@ -144,19 +145,16 @@ export function RequestPayoutModal({
           {/* Method Selection */}
           <div className="space-y-2">
             <Label htmlFor="method">Payout Method</Label>
-            <select
+            <Select
               id="method"
               value={method}
               onChange={(e) => setMethod(e.target.value as 'BKASH' | 'BANK')}
-              className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md"
-            >
-              <option value="BKASH" disabled={!userBkashNumber}>
-                bKash {userBkashNumber ? `(${userBkashNumber})` : '(Not configured)'}
-              </option>
-              <option value="BANK" disabled={!userBankAccount}>
-                Bank Transfer {userBankAccount ? `(${userBankAccount.slice(-4)}...)` : '(Not configured)'}
-              </option>
-            </select>
+              options={[
+                { value: 'BKASH', label: `bKash ${userBkashNumber ? `(${userBkashNumber})` : '(Not configured)'}` },
+                { value: 'BANK', label: `Bank Transfer ${userBankAccount ? `(${userBankAccount.slice(-4)}...)` : '(Not configured)'}` }
+              ]}
+              disabled={method === 'BANK' ? !userBankAccount : !userBkashNumber}
+            />
             {method === 'BKASH' && !userBkashNumber && (
               <p className="text-sm text-amber-600 flex items-center gap-1">
                 <AlertCircle className="w-4 h-4" />

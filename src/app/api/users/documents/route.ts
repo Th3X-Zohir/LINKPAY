@@ -5,6 +5,13 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 
+// Configure upload directory via environment variable, default to /app/data/uploads in Docker
+const getUploadDir = () => {
+  // UPLOAD_DIR can be set via environment variable for Docker/custom deployments
+  // Default to ./data/uploads relative to process.cwd() for local development
+  return process.env.UPLOAD_DIR || join(process.cwd(), 'data', 'uploads')
+}
+
 const documentTypes = ['CONTRACT', 'DELIVERY_PROOF', 'ID_PROOF', 'TAX_DOCUMENT', 'BUSINESS_LICENSE', 'OTHER'] as const
 
 // Maximum file size: 10MB
@@ -105,8 +112,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'documents', session.user.id)
+    // Create uploads directory structure if it doesn't exist
+    const baseUploadDir = getUploadDir()
+    const uploadDir = join(baseUploadDir, 'documents', session.user.id)
     await mkdir(uploadDir, { recursive: true })
 
     // Generate unique filename
@@ -119,8 +127,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filepath, buffer)
 
-    // Create URL path
-    const url = `/uploads/documents/${session.user.id}/${filename}`
+    // Create URL path (use /api/uploads prefix to serve via route handler in standalone mode)
+    const url = `/api/uploads/documents/${session.user.id}/${filename}`
 
     // Save to database
     const document = await db.document.create({

@@ -105,8 +105,19 @@ export async function DELETE(
       )
     }
 
+    // SECURITY: Validate URL is within expected directory to prevent path traversal
+    const safePathPrefix = '/api/uploads/'
+    if (!document.url.startsWith(safePathPrefix)) {
+      console.error('Document URL path traversal attempt detected:', document.url)
+      return NextResponse.json(
+        { success: false, error: 'Invalid document path' },
+        { status: 400 }
+      )
+    }
+
     // Delete file from disk
-    const filepath = join(process.cwd(), 'public', document.url)
+    const uploadDir = process.env.UPLOAD_DIR || join(process.cwd(), 'data', 'uploads')
+    const filepath = join(uploadDir, 'documents', document.url.replace(safePathPrefix, ''))
     try {
       await unlink(filepath)
     } catch (error) {

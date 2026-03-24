@@ -34,16 +34,23 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
 
     try {
       const formData = new FormData(e.currentTarget)
+      const shareUrl = formData.get('shareUrl')
       const response = await fetch(initiateUrl, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ shareUrl }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        if (data.redirectUrl) {
-          window.location.href = data.redirectUrl
+        if (data.data?.paymentUrl) {
+          window.location.href = data.data.paymentUrl
         }
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Payment initiation failed. Please try again.')
       }
     } catch (error) {
       console.error('Payment initiation failed:', error)

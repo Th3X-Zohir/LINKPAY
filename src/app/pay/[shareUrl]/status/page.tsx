@@ -212,7 +212,8 @@ function PaymentSuccess({
                 {transaction.aamarPayTxnId && (
                   <button
                     onClick={handleCopyTxnId}
-                    className="p-1 hover:bg-slate-200 rounded transition-colors"
+                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-slate-200 rounded transition-colors"
+                    aria-label="Copy transaction ID to clipboard"
                   >
                     <Copy className="w-4 h-4 text-slate-500" />
                   </button>

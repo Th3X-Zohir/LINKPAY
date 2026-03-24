@@ -190,15 +190,15 @@ export default function TransactionsPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <table className="min-w-[600px] w-full md:min-w-0">
                 <thead>
                   <tr className="text-left text-sm text-slate-500 border-b">
-                    <th className="pb-3 font-medium">Description</th>
-                    <th className="pb-3 font-medium">Date</th>
-                    <th className="pb-3 font-medium">Amount</th>
-                    <th className="pb-3 font-medium">Fees</th>
-                    <th className="pb-3 font-medium">Net</th>
+                    <th className="pb-3 font-medium pr-4">Description</th>
+                    <th className="pb-3 font-medium pr-4">Date</th>
+                    <th className="pb-3 font-medium pr-4">Amount</th>
+                    <th className="pb-3 font-medium pr-4">Fees</th>
+                    <th className="pb-3 font-medium pr-4">Net</th>
                     <th className="pb-3 font-medium">Status</th>
                   </tr>
                 </thead>
@@ -248,15 +248,17 @@ export default function TransactionsPage() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-4 py-2 border rounded-md disabled:opacity-50"
+            className="px-4 py-2 border rounded-md disabled:opacity-50 min-h-[44px] min-w-[44px]"
+            aria-label="Go to previous page"
           >
             Previous
           </button>
-          <span className="px-4 py-2">Page {page} of {totalPages}</span>
+          <span className="px-4 py-2" aria-label={`Page ${page} of ${totalPages}`}>Page {page} of {totalPages}</span>
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-4 py-2 border rounded-md disabled:opacity-50"
+            className="px-4 py-2 border rounded-md disabled:opacity-50 min-h-[44px] min-w-[44px]"
+            aria-label="Go to next page"
           >
             Next
           </button>

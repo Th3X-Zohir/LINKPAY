@@ -31,7 +31,7 @@ export function ShareMenu({ url, description, amount }: ShareMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2" aria-label="Share payment link">
           <Share2 className="w-4 h-4" /> Share
         </Button>
       </DropdownMenuTrigger>

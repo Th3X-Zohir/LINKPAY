@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { ToastProvider } from '@/components/providers/toast-provider'
-import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { MobileNav } from '@/components/layout/mobile-nav'
 
 export default async function DashboardLayout({
@@ -40,10 +39,7 @@ export default async function DashboardLayout({
         </header>
 
         <div className="flex">
-          {/* Sidebar */}
-          <SidebarNav />
-
-          {/* Mobile Navigation */}
+          {/* Navigation (Sidebar on desktop, Mobile nav at bottom) */}
           <MobileNav />
 
           {/* Main Content */}

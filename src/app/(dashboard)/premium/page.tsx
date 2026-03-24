@@ -53,20 +53,17 @@ export default function PremiumPage() {
 
   useEffect(() => {
     fetch('/api/users/profile')
-        .then(res => res.json())
-        .then(data => {
-          if (data.data?.plan === 'PREMIUM') {
-            setIsPremium(true)
-          }
-          setLoading(false)
-        })
-        .catch(() => {
-          setLoading(false)
-        })
-    } else if (status === 'unauthenticated') {
-      setLoading(false)
-    }
-  }, [status])
+      .then(res => res.json())
+      .then(data => {
+        if (data.data?.plan === 'PREMIUM') {
+          setIsPremium(true)
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [])
 
   const handleCheckout = async () => {
     setCheckoutLoading(true)
@@ -88,7 +85,7 @@ export default function PremiumPage() {
     }
   }
 
-  if (loading || status === 'loading') {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -121,7 +118,7 @@ export default function PremiumPage() {
       </div>
 
       {/* Pricing Card */}
-      <div className="grid md:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         {/* Free Plan */}
         <Card className={isPremium ? 'opacity-60' : ''}>
           <CardHeader>

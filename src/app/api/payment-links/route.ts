@@ -17,7 +17,10 @@ export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        { status: 401 }
+      )
     }
 
     const paymentLinks = await db.paymentLink.findMany({
@@ -33,7 +36,10 @@ export async function GET() {
     return NextResponse.json({ success: true, data: paymentLinks })
   } catch (error) {
     console.error('Error fetching payment links:', error)
-    return NextResponse.json({ error: 'Failed to fetch payment links' }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch payment links' } },
+      { status: 500 }
+    )
   }
 }
 
@@ -41,7 +47,10 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+        { status: 401 }
+      )
     }
 
     const body = await request.json()
@@ -49,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0].message },
+        { success: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0].message } },
         { status: 400 }
       )
     }
@@ -61,7 +70,10 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'User not found' } },
+        { status: 404 }
+      )
     }
 
     // Check transaction limit based on KYC level
@@ -70,7 +82,11 @@ export async function POST(request: NextRequest) {
 
     if (amount > limit) {
       return NextResponse.json({
-        error: `Transaction amount exceeds your limit of ৳${(limit / 100).toLocaleString('en-BD')} for ${kycLevel === 'UNVERIFIED' ? 'unverified' : kycLevel === 'BASIC' ? 'basic' : 'full'} KYC level. Please upgrade your account or complete KYC verification.`
+        success: false,
+        error: {
+          code: 'LIMIT_EXCEEDED',
+          message: `Transaction amount exceeds your limit of ৳${(limit / 100).toLocaleString('en-BD')} for ${kycLevel === 'UNVERIFIED' ? 'unverified' : kycLevel === 'BASIC' ? 'basic' : 'full'} KYC level. Please upgrade your account or complete KYC verification.`
+        }
       }, { status: 400 })
     }
 
@@ -136,6 +152,9 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
   } catch (error) {
     console.error('Error creating payment link:', error)
-    return NextResponse.json({ error: 'Failed to create payment link' }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create payment link' } },
+      { status: 500 }
+    )
   }
 }

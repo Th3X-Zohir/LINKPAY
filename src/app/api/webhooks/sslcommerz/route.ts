@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
     // SSLCommerz sends status as a single value: VALID, FAILED, CANCELLED
     const { status, tran_id, val_id, amount, bank_tran_id, card_type } = payload
 
-    // Verify signature if provided
+    // Verify signature - SSLCommerz webhooks MUST be signed
     const signature = request.headers.get('ssl-signature')
-    if (signature && !verifySSLSignature(payload as unknown as Record<string, string>, signature)) {
-      console.log('Invalid SSLCommerz webhook signature')
+    if (!signature || !verifySSLSignature(payload as unknown as Record<string, string>, signature)) {
+      console.log('Invalid or missing SSLCommerz webhook signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 

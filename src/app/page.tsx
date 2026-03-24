@@ -882,7 +882,7 @@ export default function LandingPage() {
               <div className="flex gap-4">
                 <a
                   href="#"
-                  className="w-10 h-10 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
+                  className="w-11 h-11 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
                   aria-label="Facebook"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -891,7 +891,7 @@ export default function LandingPage() {
                 </a>
                 <a
                   href="#"
-                  className="w-10 h-10 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
+                  className="w-11 h-11 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
                   aria-label="Twitter"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -900,7 +900,7 @@ export default function LandingPage() {
                 </a>
                 <a
                   href="#"
-                  className="w-10 h-10 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
+                  className="w-11 h-11 bg-slate-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
                   aria-label="LinkedIn"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -909,7 +909,7 @@ export default function LandingPage() {
                 </a>
                 <a
                   href="#"
-                  className="w-10 h-10 bg-slate-800 hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors"
+                  className="w-11 h-11 bg-slate-800 hover:bg-green-600 rounded-lg flex items-center justify-center transition-colors"
                   aria-label="WhatsApp"
                 >
                   <MessageCircle className="w-5 h-5" />

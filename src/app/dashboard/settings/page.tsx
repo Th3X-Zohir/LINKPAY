@@ -12,7 +12,9 @@ import { User, Wallet, Building, Save, CheckCircle, Loader2, FileText, ArrowRigh
 import Link from 'next/link'
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession()
+  const sessionResult = useSession()
+  const session = sessionResult?.data
+  const status = sessionResult?.status || 'loading'
   const router = useRouter()
   const [profileLoading, setProfileLoading] = useState(false)
   const [payoutLoading, setPayoutLoading] = useState(false)

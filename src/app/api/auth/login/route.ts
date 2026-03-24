@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { loginSchema } from '@/lib/validators'
 import { checkRateLimit, RateLimits, createRateLimitHeaders } from '@/lib/rate-limit'
 import { createAuditLog } from '@/lib/audit'
+import { checkAccountLockout, recordFailedLoginAttempt, resetFailedLoginAttempts } from '@/lib/account-lockout'
 
 export async function POST(request: NextRequest) {
   const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim()
@@ -55,25 +56,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.passwordHash)
-
-    if (!passwordMatch) {
+    // Check if account is locked
+    const lockoutStatus = await checkAccountLockout(user.id)
+    if (lockoutStatus.isLocked) {
       await createAuditLog({
         action: 'LOGIN',
         userId: user.id,
-        metadata: { reason: 'Invalid password', success: false },
+        metadata: { reason: 'Account locked', success: false },
+        ipAddress: clientIp,
+        userAgent,
+      })
+      return NextResponse.json(
+        {
+          error: `Account is locked. Too many failed login attempts. Try again after ${lockoutStatus.lockedUntil?.toISOString() || '15 minutes'}.`,
+        },
+        { status: 423 }
+      )
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.passwordHash)
+
+    if (!passwordMatch) {
+      // Record failed login attempt
+      const lockoutResult = await recordFailedLoginAttempt(user.id, clientIp, userAgent)
+
+      await createAuditLog({
+        action: 'LOGIN',
+        userId: user.id,
+        metadata: { reason: 'Invalid password', success: false, remainingAttempts: lockoutResult.remainingAttempts },
         ipAddress: clientIp,
         userAgent,
       })
 
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        {
+          error: lockoutResult.isLocked
+            ? `Account locked due to too many failed attempts. Try again after ${lockoutResult.lockedUntil?.toISOString()}.`
+            : 'Invalid email or password',
+        },
         {
           status: 401,
           headers: createRateLimitHeaders(rateLimitKey, RateLimits.LOGIN_ATTEMPT.limit),
         }
       )
     }
+
+    // Reset failed login attempts on successful login
+    await resetFailedLoginAttempts(user.id, clientIp, userAgent)
 
     // Log successful login
     await createAuditLog({
