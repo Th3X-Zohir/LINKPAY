@@ -18,6 +18,7 @@ export const createPaymentLinkSchema = z.object({
   customerName: z.string().min(2).max(100).optional(),
   customerEmail: z.string().email().optional().or(z.literal('')),
   customerMobile: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid Bangladeshi phone number').optional().or(z.literal('')),
+  serviceCategory: z.enum(['WEB_DEVELOPMENT', 'GRAPHIC_DESIGN', 'DATA_ENTRY', 'CONSULTING', 'COPYWRITING', 'VIDEO_EDITING', 'OTHER']).optional().default('OTHER'),
   expiresAt: z.string().datetime().optional()
 })
 

@@ -4,6 +4,15 @@ import { db } from '@/lib/db'
 import { createPaymentLinkSchema } from '@/lib/validators'
 import { createPayment } from '@/lib/api/payment-gateway'
 
+// Transaction limits based on KYC level (stored in poisha)
+const TRANSACTION_LIMITS = {
+  UNVERIFIED: 100000, // ৳1,000
+  BASIC: 1000000,     // ৳10,000
+  FULL: 10000000      // ৳1,00,000
+} as const
+
+type KycLevel = 'UNVERIFIED' | 'BASIC' | 'FULL'
+
 export async function GET() {
   try {
     const session = await auth()
@@ -45,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { amount, description, customerName, customerEmail, customerMobile, expiresAt } = parsed.data
+    const { amount, description, customerName, customerEmail, customerMobile, serviceCategory, expiresAt } = parsed.data
 
     const user = await db.user.findUnique({
       where: { id: session.user.id }
@@ -53,6 +62,16 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Check transaction limit based on KYC level
+    const kycLevel = (user.kycLevel || 'UNVERIFIED') as KycLevel
+    const limit = TRANSACTION_LIMITS[kycLevel] || TRANSACTION_LIMITS.UNVERIFIED
+
+    if (amount > limit) {
+      return NextResponse.json({
+        error: `Transaction amount exceeds your limit of ৳${(limit / 100).toLocaleString('en-BD')} for ${kycLevel === 'UNVERIFIED' ? 'unverified' : kycLevel === 'BASIC' ? 'basic' : 'full'} KYC level. Please upgrade your account or complete KYC verification.`
+      }, { status: 400 })
     }
 
     const shareUrl = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`
@@ -65,6 +84,7 @@ export async function POST(request: NextRequest) {
         customerName: customerName || null,
         customerEmail: customerEmail || null,
         customerMobile: customerMobile || null,
+        serviceCategory: serviceCategory || 'OTHER',
         shareUrl,
         expiresAt: expiresAt ? new Date(expiresAt) : null
       }

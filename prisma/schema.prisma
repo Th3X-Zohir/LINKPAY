@@ -46,6 +46,58 @@ enum PayoutMethod {
   BANK
 }
 
+enum ServiceCategory {
+  WEB_DEVELOPMENT
+  GRAPHIC_DESIGN
+  DATA_ENTRY
+  CONSULTING
+  COPYWRITING
+  VIDEO_EDITING
+  OTHER
+}
+
+enum DocumentType {
+  CONTRACT
+  DELIVERY_PROOF
+  ID_PROOF
+  TAX_DOCUMENT
+  BUSINESS_LICENSE
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum DisputeReason {
+  CLIENT_NOT_PAID
+  SERVICE_NOT_DELIVERED
+  OVERCHARGED
+  DUPLICATE_CHARGE
+  UNAUTHORIZED_CHARGE
+  OTHER
+}
+
+enum KycLevel {
+  UNVERIFIED
+  BASIC
+  FULL
+}
+
+enum NotificationType {
+  PAYMENT_RECEIVED
+  PAYOUT_PROCESSED
+  PAYOUT_COMPLETED
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
+  ACCOUNT_LOCKED
+  WELCOME
+}
+
 enum AuditAction {
   USER_CREATED
   USER_UPDATED
@@ -70,6 +122,15 @@ enum AuditAction {
   LOGIN_FAILED
   LOGIN_ATTEMPTS_RESET
   AUDIT_LOG_CLEANUP
+  DOCUMENT_UPLOADED
+  DOCUMENT_VERIFIED
+  DOCUMENT_REJECTED
+  DISPUTE_CREATED
+  DISPUTE_UPDATED
+  DISPUTE_RESOLVED
+  RISK_FLAG_ADDED
+  RISK_FLAG_REMOVED
+  KYC_LEVEL_CHANGED
 }
 
 // ============ MODELS ============
@@ -91,22 +152,33 @@ model User {
   nid                 String?   @db.Text   // Encrypted at application level using AES-256-GCM
   tin                 String?   @db.Text   // Encrypted at application level using AES-256-GCM
   emailVerified       DateTime?
-  bkashVerified Boolean   @default(false)
-  bankVerified  Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  bkashVerified       Boolean   @default(false)
+  bankVerified        Boolean   @default(false)
+  kycLevel            KycLevel  @default(UNVERIFIED)
+  riskScore           Int       @default(0)
+  riskFlags           String[]  @default([])
+  businessName        String?
+  businessAddress     String?
+  businessLogo       String?
+  defaultPaymentTerms String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  paymentLinks  PaymentLink[]
-  transactions  Transaction[]
-  payouts       Payout[]
-  auditLogs     AuditLog[]
-  sessions      Session[]
-  invoices      Invoice[]
+  paymentLinks        PaymentLink[]
+  transactions        Transaction[]
+  payouts             Payout[]
+  auditLogs           AuditLog[]
+  sessions            Session[]
+  invoices            Invoice[]
   pendingSubscriptions PendingSubscription[]
+  documents           Document[]
+  disputes            Dispute[]
+  notificationPrefs   NotificationPreference[]
 
   @@index([email])
   @@index([phone])
   @@index([isAdmin])
+  @@index([kycLevel])
 }
 
 model Session {
@@ -122,21 +194,22 @@ model Session {
 }
 
 model PaymentLink {
-  id             String    @id @default(cuid())
-  userId         String
-  amount         Int
-  description    String    @db.VarChar(500)
-  customerName   String?
-  customerEmail String?
-  customerMobile String?
-  status         LinkStatus @default(PENDING)
-  aamarPayId    String?
-  aamarPayUrl   String?
-  shareUrl      String    @unique
-  expiresAt     DateTime?
-  paidAt        DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String          @id @default(cuid())
+  userId          String
+  amount          Int
+  description     String          @db.VarChar(500)
+  customerName    String?
+  customerEmail   String?
+  customerMobile  String?
+  serviceCategory ServiceCategory @default(OTHER)
+  status          LinkStatus      @default(PENDING)
+  aamarPayId      String?
+  aamarPayUrl     String?
+  shareUrl        String          @unique
+  expiresAt       DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
@@ -144,6 +217,7 @@ model PaymentLink {
   @@index([userId])
   @@index([shareUrl])
   @@index([status])
+  @@index([serviceCategory])
 }
 
 model Transaction {
@@ -258,4 +332,65 @@ model PendingSubscription {
   @@index([userId])
   @@index([aamarPayId])
   @@index([status])
+}
+
+model Document {
+  id          String      @id @default(cuid())
+  userId      String
+  type        DocumentType
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  url         String
+  verified    Boolean     @default(false)
+  verifiedBy  String?
+  verifiedAt  DateTime?
+  rejectionReason String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([verified])
+}
+
+model Dispute {
+  id              String        @id @default(cuid())
+  transactionId   String
+  userId          String
+  reason          DisputeReason
+  description     String
+  status          DisputeStatus @default(OPEN)
+  amount          Int
+  evidenceUrls    String[]      @default([])
+  adminNotes      String?
+  resolvedAt      DateTime?
+  resolution      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([transactionId])
+  @@index([status])
+}
+
+model NotificationPreference {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  emailEnabled Boolean         @default(true)
+  smsEnabled   Boolean         @default(false)
+  pushEnabled  Boolean         @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
 }

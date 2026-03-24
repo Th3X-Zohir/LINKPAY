@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -25,15 +25,16 @@ interface Payout {
   bkashTxnId: string | null
   bankTxnId: string | null
   failureReason: string | null
-  createdAt: string
-  processedAt: string | null
+  createdAt: Date
+  processedAt: Date | null
   user: { id: string; name: string | null; email: string; bkashNumber: string | null }
-  transaction: { id: string; amount: number }
+  transactions: Array<{ id: string; amount: number }>
 }
 
 export default function AdminPayoutsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -55,6 +56,7 @@ export default function AdminPayoutsPage() {
 
   async function fetchPayouts() {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -69,9 +71,12 @@ export default function AdminPayoutsPage() {
         setPayouts(data.data)
         setTotalPages(data.pagination.totalPages)
         setTotal(data.pagination.total)
+      } else {
+        setError(data.error?.message || 'Failed to fetch payouts')
       }
     } catch (error) {
       console.error('Failed to fetch payouts:', error)
+      setError('Failed to fetch payouts')
     } finally {
       setLoading(false)
     }
@@ -154,7 +159,14 @@ export default function AdminPayoutsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-12 text-slate-500">Loading...</div>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-600 mb-2">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchPayouts}>Retry</Button>
+            </div>
           ) : payouts.length === 0 ? (
             <div className="text-center py-12 text-slate-500">No payouts found</div>
           ) : (

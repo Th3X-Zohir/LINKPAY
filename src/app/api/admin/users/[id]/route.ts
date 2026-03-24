@@ -61,11 +61,36 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             processedAt: true
           }
         },
+        documents: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            type: true,
+            filename: true,
+            originalName: true,
+            verified: true,
+            verifiedAt: true,
+            rejectionReason: true,
+            createdAt: true
+          }
+        },
+        disputes: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            reason: true,
+            status: true,
+            amount: true,
+            createdAt: true
+          }
+        },
         _count: {
           select: {
             paymentLinks: true,
             transactions: true,
-            payouts: true
+            payouts: true,
+            documents: true,
+            disputes: true
           }
         }
       }
@@ -108,7 +133,10 @@ const updateUserSchema = z.object({
   bkashNumber: z.string().optional(),
   bkashVerified: z.boolean().optional(),
   bankVerified: z.boolean().optional(),
-  isAdmin: z.boolean().optional()
+  isAdmin: z.boolean().optional(),
+  kycLevel: z.enum(['UNVERIFIED', 'BASIC', 'FULL']).optional(),
+  riskScore: z.number().min(0).max(100).optional(),
+  riskFlags: z.array(z.string()).optional()
 })
 
 /**
@@ -159,6 +187,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (parsed.data.bkashVerified !== undefined) updateData.bkashVerified = parsed.data.bkashVerified
     if (parsed.data.bankVerified !== undefined) updateData.bankVerified = parsed.data.bankVerified
     if (parsed.data.isAdmin !== undefined) updateData.isAdmin = parsed.data.isAdmin
+    if (parsed.data.kycLevel) updateData.kycLevel = parsed.data.kycLevel
+    if (parsed.data.riskScore !== undefined) updateData.riskScore = parsed.data.riskScore
+    if (parsed.data.riskFlags) updateData.riskFlags = parsed.data.riskFlags
 
     const user = await db.user.update({
       where: { id },
@@ -171,7 +202,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         plan: true,
         bkashVerified: true,
         bankVerified: true,
-        isAdmin: true
+        isAdmin: true,
+        kycLevel: true,
+        riskScore: true,
+        riskFlags: true
       }
     })
 
@@ -189,6 +223,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           isAdmin: currentUser?.isAdmin !== user.isAdmin ? { from: currentUser?.isAdmin, to: user.isAdmin } : undefined,
           bkashVerified: currentUser?.bkashVerified !== user.bkashVerified ? { from: currentUser?.bkashVerified, to: user.bkashVerified } : undefined,
           bankVerified: currentUser?.bankVerified !== user.bankVerified ? { from: currentUser?.bankVerified, to: user.bankVerified } : undefined,
+          kycLevel: parsed.data.kycLevel ? { change: parsed.data.kycLevel } : undefined,
+          riskScore: parsed.data.riskScore !== undefined ? { change: parsed.data.riskScore } : undefined,
+          riskFlags: parsed.data.riskFlags ? { change: parsed.data.riskFlags } : undefined,
         }
       },
       ipAddress: clientIp,

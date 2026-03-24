@@ -8,9 +8,14 @@ import { Plus, Link as LinkIcon, CreditCard, TrendingUp, ArrowRight, Loader2 } f
 import { formatCurrency } from '@/lib/utils'
 
 interface DashboardData {
-  totalEarnings: number
-  totalLinks: number
-  totalTransactions: number
+  overview: {
+    totalEarnings: number
+    totalVolume: number
+    totalFees: number
+    transactionCount: number
+    paymentLinksCount: number
+    successRate: number
+  }
   recentTransactions: Array<{
     id: string
     amount: number
@@ -99,8 +104,8 @@ export default function DashboardPage() {
             <TrendingUp className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
-            <p className="text-xs text-slate-500">From {stats.totalTransactions} transactions</p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.overview.totalEarnings)}</div>
+            <p className="text-xs text-slate-500">From {stats.overview.transactionCount} transactions</p>
           </CardContent>
         </Card>
 
@@ -110,7 +115,7 @@ export default function DashboardPage() {
             <LinkIcon className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalLinks}</div>
+            <div className="text-2xl font-bold">{stats.overview.paymentLinksCount}</div>
             <p className="text-xs text-slate-500">Created links</p>
           </CardContent>
         </Card>
@@ -121,7 +126,7 @@ export default function DashboardPage() {
             <CreditCard className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
+            <div className="text-2xl font-bold">{stats.overview.transactionCount}</div>
             <p className="text-xs text-slate-500">Total transactions</p>
           </CardContent>
         </Card>

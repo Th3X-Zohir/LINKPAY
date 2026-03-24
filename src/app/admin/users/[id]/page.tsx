@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   ArrowLeft,
@@ -15,7 +16,13 @@ import {
   Crown,
   CreditCard,
   Link as LinkIcon,
-  Wallet
+  Wallet,
+  AlertTriangle,
+  FileText,
+  Flag,
+  ShieldAlert,
+  ShieldCheck,
+  User
 } from 'lucide-react'
 
 interface UserDetail {
@@ -28,6 +35,9 @@ interface UserDetail {
   bkashVerified: boolean
   bankVerified: boolean
   isAdmin: boolean
+  kycLevel: 'UNVERIFIED' | 'BASIC' | 'FULL'
+  riskScore: number
+  riskFlags: string[]
   createdAt: string
   totalVolume: number
   totalPlatformFees: number
@@ -57,10 +67,29 @@ interface UserDetail {
     createdAt: string
     processedAt: string | null
   }>
+  documents: Array<{
+    id: string
+    type: string
+    filename: string
+    originalName: string
+    verified: boolean
+    verifiedAt: string | null
+    rejectionReason: string | null
+    createdAt: string
+  }>
+  disputes: Array<{
+    id: string
+    reason: string
+    status: string
+    amount: number
+    createdAt: string
+  }>
   _count: {
     paymentLinks: number
     transactions: number
     payouts: number
+    documents: number
+    disputes: number
   }
 }
 
@@ -75,7 +104,11 @@ export default function AdminUserDetailPage() {
   const [showVerifyBkash, setShowVerifyBkash] = useState(false)
   const [showVerifyBank, setShowVerifyBank] = useState(false)
   const [showChangePlan, setShowChangePlan] = useState(false)
+  const [showRiskManagement, setShowRiskManagement] = useState(false)
   const [newPlan, setNewPlan] = useState<'FREE' | 'PREMIUM'>('FREE')
+  const [riskScore, setRiskScore] = useState(0)
+  const [riskFlags, setRiskFlags] = useState<string[]>([])
+  const [newRiskFlag, setNewRiskFlag] = useState('')
 
   useEffect(() => {
     fetchUser()
@@ -90,6 +123,8 @@ export default function AdminUserDetailPage() {
       if (data.success) {
         setUser(data.data)
         setNewPlan(data.data.plan)
+        setRiskScore(data.data.riskScore || 0)
+        setRiskFlags(data.data.riskFlags || [])
       } else {
         setError(data.error?.message || 'Failed to fetch user')
       }
@@ -132,6 +167,22 @@ export default function AdminUserDetailPage() {
   async function changePlan() {
     await updateUser({ plan: newPlan })
     setShowChangePlan(false)
+  }
+
+  async function updateRiskManagement() {
+    await updateUser({ riskScore, riskFlags })
+    setShowRiskManagement(false)
+  }
+
+  async function addRiskFlag() {
+    if (newRiskFlag.trim() && !riskFlags.includes(newRiskFlag.trim())) {
+      setRiskFlags([...riskFlags, newRiskFlag.trim()])
+      setNewRiskFlag('')
+    }
+  }
+
+  async function removeRiskFlag(flag: string) {
+    setRiskFlags(riskFlags.filter(f => f !== flag))
   }
 
   async function toggleAdmin() {
@@ -184,6 +235,18 @@ export default function AdminUserDetailPage() {
           <Button
             variant="outline"
             className="gap-2"
+            onClick={() => {
+              setRiskScore(user.riskScore)
+              setRiskFlags(user.riskFlags)
+              setShowRiskManagement(true)
+            }}
+          >
+            <ShieldAlert className="w-4 h-4" />
+            Risk Management
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2"
             onClick={toggleAdmin}
             disabled={actionLoading !== null}
           >
@@ -211,6 +274,27 @@ export default function AdminUserDetailPage() {
         <Badge variant={user.bankVerified ? 'default' : 'outline'}>
           Bank {user.bankVerified ? 'Verified' : 'Unverified'}
         </Badge>
+        {/* KYC Level */}
+        <Badge variant={user.kycLevel === 'FULL' ? 'default' : user.kycLevel === 'BASIC' ? 'secondary' : 'outline'}>
+          {user.kycLevel === 'FULL' && <ShieldCheck className="w-3 h-3 mr-1" />}
+          {user.kycLevel === 'BASIC' && <Shield className="w-3 h-3 mr-1" />}
+          {user.kycLevel === 'UNVERIFIED' && <User className="w-3 h-3 mr-1" />}
+          KYC: {user.kycLevel}
+        </Badge>
+        {/* Risk Score */}
+        {user.riskScore > 0 && (
+          <Badge variant={user.riskScore >= 70 ? 'destructive' : user.riskScore >= 40 ? 'default' : 'secondary'}>
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Risk: {user.riskScore}
+          </Badge>
+        )}
+        {/* Risk Flags Count */}
+        {user.riskFlags.length > 0 && (
+          <Badge variant="destructive">
+            <Flag className="w-3 h-3 mr-1" />
+            {user.riskFlags.length} Flag{user.riskFlags.length !== 1 ? 's' : ''}
+          </Badge>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -452,6 +536,138 @@ export default function AdminUserDetailPage() {
               <div className="flex gap-2 justify-end">
                 <Button variant="outline" onClick={() => setShowChangePlan(false)}>Cancel</Button>
                 <Button onClick={changePlan}>Update Plan</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showRiskManagement && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5" />
+                Risk Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Risk Score */}
+              <div className="space-y-2">
+                <Label>Risk Score (0-100)</Label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={riskScore}
+                    onChange={(e) => setRiskScore(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <span className={`font-bold w-12 text-center ${
+                    riskScore >= 70 ? 'text-red-600' :
+                    riskScore >= 40 ? 'text-amber-600' : 'text-green-600'
+                  }`}>
+                    {riskScore}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500">
+                  0-39: Low risk, 40-69: Medium risk, 70-100: High risk
+                </p>
+              </div>
+
+              {/* KYC Level */}
+              <div className="space-y-2">
+                <Label>KYC Verification Level</Label>
+                <select
+                  value={user.kycLevel}
+                  onChange={(e) => updateUser({ kycLevel: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  <option value="UNVERIFIED">Unverified</option>
+                  <option value="BASIC">Basic (Phone + Email verified)</option>
+                  <option value="FULL">Full (ID + Documents verified)</option>
+                </select>
+              </div>
+
+              {/* Risk Flags */}
+              <div className="space-y-2">
+                <Label>Risk Flags</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {riskFlags.map(flag => (
+                    <Badge key={flag} variant="destructive" className="gap-1">
+                      {flag}
+                      <button onClick={() => removeRiskFlag(flag)} className="ml-1 hover:text-white">
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a risk flag..."
+                    value={newRiskFlag}
+                    onChange={(e) => setNewRiskFlag(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addRiskFlag())}
+                  />
+                  <Button onClick={addRiskFlag} variant="outline">Add</Button>
+                </div>
+                <p className="text-sm text-slate-500">
+                  Common flags: &quot;HIGH_VOLUME&quot;, &quot;CHARGEBACK_HISTORY&quot;, &quot;SUSPICIOUS_ACTIVITY&quot;, &quot;MULTIPLE_ACCOUNTS&quot;
+                </p>
+              </div>
+
+              {/* Document Verification Status */}
+              <div className="space-y-2">
+                <Label>Document Verification Status</Label>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  {user.documents && user.documents.length > 0 ? (
+                    <div className="space-y-2">
+                      {user.documents.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-slate-400" />
+                            {doc.originalName}
+                          </span>
+                          <Badge variant={doc.verified ? 'default' : 'secondary'}>
+                            {doc.verified ? 'Verified' : 'Pending'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-sm">No documents uploaded</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Disputes */}
+              <div className="space-y-2">
+                <Label>Recent Disputes</Label>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  {user.disputes && user.disputes.length > 0 ? (
+                    <div className="space-y-2">
+                      {user.disputes.map(dispute => (
+                        <div key={dispute.id} className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-slate-400" />
+                            {dispute.reason}
+                          </span>
+                          <Badge variant={dispute.status === 'OPEN' ? 'destructive' : 'secondary'}>
+                            {dispute.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-sm">No disputes filed</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowRiskManagement(false)}>Cancel</Button>
+                <Button onClick={updateRiskManagement}>Save Changes</Button>
               </div>
             </CardContent>
           </Card>

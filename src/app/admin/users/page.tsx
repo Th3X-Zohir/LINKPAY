@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
-import { Search, ChevronLeft, ChevronRight, UserCheck, UserX } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, UserCheck, UserX, Loader2 } from 'lucide-react'
 
 interface User {
   id: string
@@ -23,6 +23,7 @@ interface User {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -35,6 +36,7 @@ export default function AdminUsersPage() {
 
   async function fetchUsers() {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -49,9 +51,12 @@ export default function AdminUsersPage() {
         setUsers(data.data)
         setTotalPages(data.pagination.totalPages)
         setTotal(data.pagination.total)
+      } else {
+        setError(data.error?.message || 'Failed to fetch users')
       }
     } catch (error) {
       console.error('Failed to fetch users:', error)
+      setError('Failed to fetch users')
     } finally {
       setLoading(false)
     }
@@ -107,7 +112,14 @@ export default function AdminUsersPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-12 text-slate-500">Loading...</div>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-600 mb-2">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchUsers}>Retry</Button>
+            </div>
           ) : users.length === 0 ? (
             <div className="text-center py-12 text-slate-500">No users found</div>
           ) : (

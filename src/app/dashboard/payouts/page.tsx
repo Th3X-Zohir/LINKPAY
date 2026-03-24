@@ -16,15 +16,17 @@ interface Payout {
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   bkashTxnId: string | null
   bankTxnId: string | null
-  failureMsg: string | null
-  createdAt: string
-  processedAt: string | null
+  failureReason: string | null
+  createdAt: Date
+  processedAt: Date | null
 }
 
 interface BalanceData {
-  availableBalance: number
+  available: number
+  pendingPayout: number
   totalPaidOut: number
-  pendingAmount: number
+  lifetimeEarnings: number
+  pendingTransactionCount: number
 }
 
 export default function PayoutsPage() {
@@ -42,8 +44,8 @@ export default function PayoutsPage() {
     try {
       const res = await fetch('/api/payouts')
       const data = await res.json()
-      if (data.success) {
-        setPayouts(data.data)
+      if (data.success && data.data?.payouts) {
+        setPayouts(data.data.payouts)
       }
     } catch (err) {
       console.error('Failed to fetch payouts:', err)
@@ -65,15 +67,15 @@ export default function PayoutsPage() {
   }
 
   async function requestPayout() {
-    if (!balance || balance.availableBalance < 500) return
+    if (!balance || balance.available < 500) return
 
     setRequesting(true)
     try {
-      const res = await fetch('/api/payouts/request', {
+      const res = await fetch('/api/payouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: balance.availableBalance,
+          amount: balance.available,
           method: 'BKASH'
         })
       })
@@ -115,9 +117,9 @@ export default function PayoutsPage() {
     )
   }
 
-  const availableBalance = balance?.availableBalance || 0
+  const availableBalance = balance?.available || 0
   const totalPaidOut = balance?.totalPaidOut || 0
-  const pendingAmount = balance?.pendingAmount || 0
+  const pendingAmount = balance?.pendingPayout || 0
 
   return (
     <div className="space-y-6">
@@ -217,8 +219,8 @@ export default function PayoutsPage() {
                     <Link href={`/dashboard/payouts/${payout.id}`} className="text-xl font-bold hover:underline">
                       {formatCurrency(payout.amount)}
                     </Link>
-                    {payout.failureMsg && (
-                      <div className="text-sm text-red-600 mt-1">{payout.failureMsg}</div>
+                    {payout.failureReason && (
+                      <div className="text-sm text-red-600 mt-1">{payout.failureReason}</div>
                     )}
                   </div>
                 </div>
