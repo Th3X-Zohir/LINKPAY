@@ -20,6 +20,7 @@ interface SSLCommerzWebhookPayload {
   stored_card_name?: string
   store_id?: string
   error?: string
+  signature?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -32,10 +33,11 @@ export async function POST(request: NextRequest) {
     const payload: SSLCommerzWebhookPayload = await request.json()
 
     // SSLCommerz sends status as a single value: VALID, FAILED, CANCELLED
-    const { status, tran_id, val_id, amount, bank_tran_id, card_type } = payload
+    const { status, tran_id, val_id, amount, bank_tran_id, card_type, signature: bodySignature } = payload
 
-    // Verify signature - SSLCommerz webhooks MUST be signed
-    const signature = request.headers.get('ssl-signature')
+    // Verify signature - SSLCommerz sends signature in POST body as 'signature' field
+    // Also check header for backward compatibility
+    const signature = request.headers.get('ssl-signature') || bodySignature
     if (!signature || !verifySSLSignature(payload as unknown as Record<string, string>, signature)) {
       console.log('Invalid or missing SSLCommerz webhook signature')
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
@@ -50,172 +52,189 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Event already processed' })
     }
 
-    // Mark event as processed
+    // Create webhook event record first (not yet processed)
     await db.webhookEvent.create({
       data: {
         eventId: tran_id,
         eventType: 'SSL_COMMERZ_PAYMENT_STATUS',
         payload: JSON.parse(JSON.stringify(payload)),
-        processed: true,
-        processedAt: new Date()
+        processed: false,
+        processedAt: null
       }
     })
 
-    // Handle different statuses
-    if (status === 'VALID') {
-      // Successful payment
-      const paymentLink = await db.paymentLink.findFirst({
-        where: {
-          OR: [
-            { aamarPayId: tran_id },
-            { shareUrl: tran_id }
-          ]
-        },
-        include: { user: true }
-      })
-
-      if (!paymentLink) {
-        console.log('Payment link not found for tran_id:', tran_id)
-        return NextResponse.json({ error: 'Payment link not found' }, { status: 404 })
-      }
-
-      // Amount in BDT, convert to poisha (multiply by 100)
-      const amountInPoisha = Math.round(parseFloat(amount || '0') * 100)
-      const platformFee = Math.round(amountInPoisha * 0.0075) // 0.75% platform fee
-      const gatewayFee = Math.round(amountInPoisha * 0.025) // ~2.5% gateway fee
-      const netAmount = amountInPoisha - platformFee - gatewayFee
-
-      // Atomic transaction: update PaymentLink and create Transaction together
-      const transaction = await db.$transaction(async (tx) => {
-        await tx.paymentLink.update({
-          where: { id: paymentLink.id },
-          data: {
-            status: 'PAID',
-            paidAt: new Date()
-          }
+    try {
+      // Handle different statuses
+      if (status === 'VALID') {
+        // Successful payment
+        const paymentLink = await db.paymentLink.findFirst({
+          where: {
+            OR: [
+              { aamarPayId: tran_id },
+              { shareUrl: tran_id }
+            ]
+          },
+          include: { user: true }
         })
 
-        return tx.transaction.create({
-          data: {
+        if (!paymentLink) {
+          console.log('Payment link not found for tran_id:', tran_id)
+          // Don't mark as processed - allow retry
+          return NextResponse.json({ error: 'Payment link not found' }, { status: 404 })
+        }
+
+        // Amount in BDT, convert to poisha (multiply by 100)
+        const amountInPoisha = Math.round(parseFloat(amount || '0') * 100)
+        const platformFee = Math.round(amountInPoisha * 0.0075) // 0.75% platform fee
+        const gatewayFee = Math.round(amountInPoisha * 0.025) // ~2.5% gateway fee
+        const netAmount = amountInPoisha - platformFee - gatewayFee
+
+        // Atomic transaction: update PaymentLink and create Transaction together
+        const transaction = await db.$transaction(async (tx) => {
+          await tx.paymentLink.update({
+            where: { id: paymentLink.id },
+            data: {
+              status: 'PAID',
+              paidAt: new Date()
+            }
+          })
+
+          return tx.transaction.create({
+            data: {
+              paymentLinkId: paymentLink.id,
+              userId: paymentLink.userId,
+              amount: amountInPoisha,
+              platformFee,
+              gatewayFee,
+              netAmount,
+              status: 'SUCCESS',
+              aamarPayTxnId: bank_tran_id || tran_id,
+              aamarPayFees: JSON.stringify({
+                platform: platformFee,
+                gateway: gatewayFee,
+                sslcommerzValId: val_id
+              })
+            }
+          })
+        })
+
+        // Create audit log entry
+        await createAuditLog({
+          action: 'TRANSACTION_SUCCESS',
+          userId: paymentLink.userId,
+          metadata: {
+            transactionId: transaction.id,
             paymentLinkId: paymentLink.id,
-            userId: paymentLink.userId,
             amount: amountInPoisha,
+            netAmount,
             platformFee,
             gatewayFee,
-            netAmount,
-            status: 'SUCCESS',
-            aamarPayTxnId: bank_tran_id || tran_id,
-            aamarPayFees: JSON.stringify({
-              platform: platformFee,
-              gateway: gatewayFee,
-              sslcommerzValId: val_id
-            })
-          }
+            sslcommerzTranId: tran_id,
+            sslcommerzValId: val_id,
+            cardType: card_type,
+            gateway: 'sslcommerz'
+          },
+          ipAddress: clientIp
         })
-      })
 
-      // Create audit log entry
-      await createAuditLog({
-        action: 'TRANSACTION_SUCCESS',
-        userId: paymentLink.userId,
-        metadata: {
-          transactionId: transaction.id,
-          paymentLinkId: paymentLink.id,
+        // Send email notification
+        await sendPaymentReceivedEmail({
+          to: paymentLink.user.email,
+          freelancerName: paymentLink.user.name || 'Freelancer',
+          clientName: paymentLink.customerName || undefined,
           amount: amountInPoisha,
+          description: paymentLink.description,
           netAmount,
-          platformFee,
-          gatewayFee,
-          sslcommerzTranId: tran_id,
-          sslcommerzValId: val_id,
-          cardType: card_type
-        },
-        ipAddress: clientIp
-      })
+          platformFee
+        }).catch((err) => {
+          console.error('Failed to send payment email:', err)
+        })
+      } else if (status === 'CANCELLED') {
+        // Handle cancelled payment
+        const paymentLink = await db.paymentLink.findFirst({
+          where: {
+            OR: [
+              { aamarPayId: tran_id },
+              { shareUrl: tran_id }
+            ]
+          },
+          include: { user: true }
+        })
 
-      await db.auditLog.create({
+        if (paymentLink) {
+          // Update payment link status to CANCELLED
+          await db.paymentLink.update({
+            where: { id: paymentLink.id },
+            data: { status: 'CANCELLED' }
+          })
+
+          await createAuditLog({
+            action: 'TRANSACTION_FAILED',
+            userId: paymentLink.userId,
+            metadata: {
+              paymentLinkId: paymentLink.id,
+              sslcommerzTranId: tran_id,
+              reason: 'Payment cancelled by user',
+              gateway: 'sslcommerz'
+            },
+            ipAddress: clientIp
+          })
+        }
+      } else if (status === 'FAILED') {
+        // Handle failed payment
+        const paymentLink = await db.paymentLink.findFirst({
+          where: {
+            OR: [
+              { aamarPayId: tran_id },
+              { shareUrl: tran_id }
+            ]
+          },
+          include: { user: true }
+        })
+
+        if (paymentLink) {
+          // Update payment link status to CANCELLED (payment was attempted but failed)
+          await db.paymentLink.update({
+            where: { id: paymentLink.id },
+            data: { status: 'CANCELLED' }
+          })
+
+          await createAuditLog({
+            action: 'TRANSACTION_FAILED',
+            userId: paymentLink.userId,
+            metadata: {
+              paymentLinkId: paymentLink.id,
+              sslcommerzTranId: tran_id,
+              reason: payload.error || 'Payment failed',
+              gateway: 'sslcommerz'
+            },
+            ipAddress: clientIp
+          })
+        }
+      }
+
+      // Mark webhook event as processed after successful completion
+      await db.webhookEvent.update({
+        where: { eventId: tran_id },
         data: {
-          userId: paymentLink.userId,
-          action: 'TRANSACTION_SUCCESS',
-          details: {
-            paymentLinkId: paymentLink.id,
-            transactionId: transaction.id,
-            amount: amountInPoisha,
-            netAmount
-          }
+          processed: true,
+          processedAt: new Date()
         }
       })
 
-      // Send email notification
-      await sendPaymentReceivedEmail({
-        to: paymentLink.user.email,
-        freelancerName: paymentLink.user.name || 'Freelancer',
-        clientName: paymentLink.customerName || undefined,
-        amount: amountInPoisha,
-        description: paymentLink.description,
-        netAmount,
-        platformFee
-      }).catch((err) => {
-        console.error('Failed to send payment email:', err)
-      })
-
       return NextResponse.json({ message: 'Webhook processed successfully' })
-    } else if (status === 'CANCELLED') {
-      // Handle cancelled payment
-      const paymentLink = await db.paymentLink.findFirst({
-        where: {
-          OR: [
-            { aamarPayId: tran_id },
-            { shareUrl: tran_id }
-          ]
-        },
-        include: { user: true }
-      })
+    } catch (error) {
+      // Mark event as not processed on error - allows retry
+      await db.webhookEvent.update({
+        where: { eventId: tran_id },
+        data: {
+          processed: false,
+          processedAt: null
+        }
+      }).catch(() => { /* ignore update error */ })
 
-      if (paymentLink) {
-        await db.auditLog.create({
-          data: {
-            userId: paymentLink.userId,
-            action: 'TRANSACTION_FAILED',
-            details: {
-              paymentLinkId: paymentLink.id,
-              sslcommerzTranId: tran_id,
-              reason: 'Payment cancelled by user'
-            }
-          }
-        })
-      }
-
-      return NextResponse.json({ message: 'Webhook processed successfully' })
-    } else if (status === 'FAILED') {
-      // Handle failed payment
-      const paymentLink = await db.paymentLink.findFirst({
-        where: {
-          OR: [
-            { aamarPayId: tran_id },
-            { shareUrl: tran_id }
-          ]
-        },
-        include: { user: true }
-      })
-
-      if (paymentLink) {
-        await db.auditLog.create({
-          data: {
-            userId: paymentLink.userId,
-            action: 'TRANSACTION_FAILED',
-            details: {
-              paymentLinkId: paymentLink.id,
-              sslcommerzTranId: tran_id,
-              reason: payload.error || 'Payment failed'
-            }
-          }
-        })
-      }
-
-      return NextResponse.json({ message: 'Webhook processed successfully' })
+      throw error // Re-throw to trigger outer catch block
     }
-
-    return NextResponse.json({ message: 'Webhook processed successfully' })
   } catch (error) {
     console.error('SSLCommerz webhook error:', error)
     return NextResponse.json({ error: 'Failed to process webhook' }, { status: 500 })
