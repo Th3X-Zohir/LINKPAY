@@ -14,10 +14,15 @@ export async function GET() {
 
     const userId = session.user.id
 
-    // Get all successful transactions
+    // Get all successful transactions with payment link details
     const transactions = await db.transaction.findMany({
       where: { userId, status: 'SUCCESS' },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        paymentLink: {
+          select: { description: true }
+        }
+      }
     })
 
     const paymentLinksCount = await db.paymentLink.count({
@@ -80,16 +85,14 @@ export async function GET() {
         },
         dailyEarnings: earningsChartData,
         dailyTransactions: transactionChartData,
-        recentTransactions: transactions.slice(0, 10).map(t => ({
+        topTransactions: transactions.slice(0, 10).map(t => ({
           id: t.id,
           amount: t.amount,
           netAmount: t.netAmount,
           platformFee: t.platformFee,
           gatewayFee: t.gatewayFee,
           createdAt: t.createdAt.toISOString(),
-          paymentLink: {
-            description: ''
-          }
+          description: t.paymentLink.description
         })),
         feeBreakdown
       }

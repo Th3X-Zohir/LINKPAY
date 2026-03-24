@@ -98,10 +98,23 @@ enum NotificationType {
   WELCOME
 }
 
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  EMAIL_CHANGE
+}
+
+enum OtpTokenType {
+  LOGIN
+  PASSWORD_RESET
+  PHONE_VERIFICATION
+}
+
 enum AuditAction {
   USER_CREATED
   USER_UPDATED
   LOGIN
+  LOGIN_OTP
   PAYMENT_LINK_CREATED
   PAYMENT_LINK_UPDATED
   PAYMENT_LINK_CANCELLED
@@ -122,6 +135,12 @@ enum AuditAction {
   LOGIN_FAILED
   LOGIN_ATTEMPTS_RESET
   AUDIT_LOG_CLEANUP
+  PASSKEY_REGISTERED
+  PASSKEY_DELETED
+  EMAIL_VERIFIED
+  EMAIL_VERIFICATION_SENT
+  OTP_SENT
+  PREMIUM_CHECKOUT_INITIATED
   DOCUMENT_UPLOADED
   DOCUMENT_VERIFIED
   DOCUMENT_REJECTED
@@ -174,6 +193,7 @@ model User {
   documents           Document[]
   disputes            Dispute[]
   notificationPrefs   NotificationPreference[]
+  passkeys           Passkey[]
 
   @@index([email])
   @@index([phone])
@@ -393,4 +413,49 @@ model NotificationPreference {
 
   @@unique([userId, type])
   @@index([userId])
+}
+
+// Email verification tokens (email-based, not user-bound until verified)
+model VerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  type      VerificationTokenType @default(EMAIL_VERIFICATION)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([token])
+}
+
+// OTP tokens for login verification (email-based)
+model OtpToken {
+  id        String   @id @default(cuid())
+  email     String
+  otpHash   String
+  type      OtpTokenType @default(LOGIN)
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+// Passkey credentials for passwordless auth
+model Passkey {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String?
+  credentialId String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  deviceType   String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([credentialId])
 }

@@ -55,13 +55,21 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch('/api/admin/analytics/dashboard')
       const result = await res.json()
+
+      // Handle non-admin access (403)
+      if (res.status === 403) {
+        setError('Access denied. You are not an admin.')
+        setLoading(false)
+        return
+      }
+
       if (result.success) {
         setStats(result.data)
       } else {
-        setError(result.error || 'Failed to fetch dashboard data')
+        setError(result.error?.message || result.error || 'Failed to fetch dashboard data')
       }
     } catch (err) {
-      setError('Failed to fetch dashboard data')
+      setError('Failed to fetch dashboard data. Please try again.')
       console.error(err)
     } finally {
       setLoading(false)

@@ -7,17 +7,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
-import { User, Wallet, Building, Save, CheckCircle } from 'lucide-react'
+import { User, Wallet, Building, Save, CheckCircle, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    name: session?.user?.name || '',
+    name: '',
     phone: '',
     bkashNumber: '',
     bankAccount: '',
@@ -39,6 +39,9 @@ export default function SettingsPage() {
           bankName: data.data.bankName || '',
           bankRouting: data.data.bankRouting || ''
         })
+      } else if (session?.user?.name) {
+        // Fallback to session name if API doesn't return name
+        setFormData(prev => ({ ...prev, name: session?.user?.name || '' }))
       }
     } catch (err) {
       console.error('Failed to fetch profile:', err)
@@ -112,6 +115,20 @@ export default function SettingsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading state while session is loading
+  if (status === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  // If not authenticated, don't render anything (will redirect)
+  if (!session) {
+    return null
   }
 
   return (

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 const updatePayoutSchema = z.object({
   status: z.enum(['PROCESSING', 'COMPLETED', 'FAILED']),
   bkashTxnId: z.string().optional(),
-  failureReason: z.string().optional()
+  failureMsg: z.string().optional()
 })
 
 export async function PATCH(request: NextRequest) {
@@ -88,7 +88,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const updateData: { status: PayoutStatus; processedAt?: Date; bkashTxnId?: string; failureReason?: string } = {
+    const updateData: { status: PayoutStatus; processedAt?: Date; bkashTxnId?: string; failureMsg?: string } = {
       status: parsed.data.status as PayoutStatus
     }
 
@@ -98,8 +98,8 @@ export async function PATCH(request: NextRequest) {
     if (parsed.data.bkashTxnId) {
       updateData.bkashTxnId = parsed.data.bkashTxnId
     }
-    if (parsed.data.failureReason) {
-      updateData.failureReason = parsed.data.failureReason
+    if (parsed.data.failureMsg) {
+      updateData.failureMsg = parsed.data.failureMsg
     }
 
     const payout = await db.payout.update({

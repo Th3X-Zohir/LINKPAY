@@ -24,7 +24,7 @@ interface Payout {
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   bkashTxnId: string | null
   bankTxnId: string | null
-  failureReason: string | null
+  failureMsg: string | null
   createdAt: Date
   processedAt: Date | null
   user: { id: string; name: string | null; email: string; bkashNumber: string | null }
@@ -47,7 +47,7 @@ export default function AdminPayoutsPage() {
   })
   const [updateStatus, setUpdateStatus] = useState<'PROCESSING' | 'COMPLETED' | 'FAILED'>('PROCESSING')
   const [txId, setTxId] = useState('')
-  const [failureReason, setFailureReason] = useState('')
+  const [failureMsg, setFailureMsg] = useState('')
 
   useEffect(() => {
     fetchPayouts()
@@ -92,7 +92,7 @@ export default function AdminPayoutsPage() {
         body: JSON.stringify({
           status: updateStatus,
           bkashTxnId: txId || undefined,
-          failureReason: failureReason || undefined
+          failureMsg: failureMsg || undefined
         })
       })
 
@@ -109,7 +109,7 @@ export default function AdminPayoutsPage() {
     setUpdateDialog({ open: true, payout })
     setUpdateStatus('PROCESSING')
     setTxId('')
-    setFailureReason('')
+    setFailureMsg('')
   }
 
   function getStatusIcon(status: string) {
@@ -300,8 +300,8 @@ export default function AdminPayoutsPage() {
               <div className="space-y-2">
                 <Label>Failure Reason</Label>
                 <Input
-                  value={failureReason}
-                  onChange={(e) => setFailureReason(e.target.value)}
+                  value={failureMsg}
+                  onChange={(e) => setFailureMsg(e.target.value)}
                   placeholder="Enter reason for failure"
                 />
               </div>

@@ -112,6 +112,30 @@ export async function sendPayoutProcessedEmail(data: PayoutProcessedEmailData) {
   }
 }
 
+interface GenericEmailData {
+  to: string
+  subject: string
+  html: string
+}
+
+export async function sendEmail(data: GenericEmailData) {
+  try {
+    const { to, subject, html } = data
+
+    await resend.emails.send({
+      from: 'LinkPay BD <noreply@linkpaybd.com>',
+      to,
+      subject,
+      html
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Email send error:', error)
+    return { success: false, error }
+  }
+}
+
 interface PlanChangeEmailData {
   to: string
   userName: string

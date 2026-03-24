@@ -5,7 +5,8 @@ import { z } from 'zod'
 
 const updateProfileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-  email: z.string().email('Invalid email address').optional()
+  email: z.string().email('Invalid email address').optional(),
+  phone: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid Bangladesh phone number').optional().or(z.literal(''))
 })
 
 export async function GET() {
@@ -52,10 +53,12 @@ export async function GET() {
         name: user.name,
         phone: user.phone,
         plan: user.plan,
-        payoutMethods: {
-          bkash: user.bkashNumber ? { number: '****' + user.bkashNumber.slice(-3), verified: user.bkashVerified } : null,
-          bank: user.bankAccount ? { account: '****' + user.bankAccount.slice(-4), bankName: user.bankName, verified: user.bankVerified } : null
-        },
+        bkashNumber: user.bkashNumber || '',
+        bankAccount: user.bankAccount || '',
+        bankName: user.bankName || '',
+        bankRouting: user.bankRouting || '',
+        bkashVerified: user.bkashVerified || false,
+        bankVerified: user.bankVerified || false,
         createdAt: user.createdAt
       }
     })

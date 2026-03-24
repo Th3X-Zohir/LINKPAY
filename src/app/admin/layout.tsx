@@ -1,7 +1,9 @@
-import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import Link from 'next/link'
 import { LayoutDashboard, Users, CreditCard, Wallet, BarChart3, LogOut, FileText } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { AlertTriangle } from 'lucide-react'
 
 export default async function AdminLayout({
   children,
@@ -14,8 +16,39 @@ export default async function AdminLayout({
   const adminEmails = process.env.ADMIN_EMAILS?.split(',') || []
   const isAdmin = session?.user?.email && adminEmails.includes(session.user.email)
 
+  // Show access denied page instead of silent redirect
   if (!isAdmin) {
-    redirect('/dashboard')
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h1>
+            <p className="text-slate-600 mb-4">
+              You are not authorized to access the admin panel.
+            </p>
+            <p className="text-sm text-slate-500 mb-6">
+              Logged in as: <span className="font-mono">{session?.user?.email || 'Unknown'}</span>
+            </p>
+            <p className="text-sm text-slate-500 mb-6">
+              Admin emails: <span className="font-mono text-xs">{adminEmails.join(', ')}</span>
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link href="/dashboard">
+                <Button className="w-full">Go to Dashboard</Button>
+              </Link>
+              <form action="/api/auth/signout" method="POST">
+                <Button type="submit" variant="outline" className="w-full">
+                  Sign Out and Login as Admin
+                </Button>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const navItems = [

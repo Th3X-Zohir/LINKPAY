@@ -8,17 +8,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Loader2, Mail, KeyRound, Fingerprint } from 'lucide-react'
+
+type LoginMethod = 'password' | 'otp' | 'passkey'
 
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('password')
+  const [otpSent, setOtpSent] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    otp: ''
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
@@ -44,6 +52,101 @@ export default function LoginPage() {
     }
   }
 
+  const handleRequestOtp = async () => {
+    if (!formData.email) {
+      setError('Please enter your email first')
+      return
+    }
+
+    setOtpLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      })
+
+      const data = await res.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to send OTP')
+      }
+
+      setOtpSent(true)
+      setLoginMethod('otp')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  const handleOtpLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: formData.otp
+        })
+      })
+
+      const data = await res.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Invalid OTP')
+      }
+
+      router.push('/dashboard')
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid OTP')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePasskeyLogin = async () => {
+    if (!formData.email) {
+      setError('Please enter your email first')
+      return
+    }
+
+    setPasskeyLoading(true)
+    setError('')
+
+    try {
+      // Get authentication options
+      const optionsRes = await fetch('/api/auth/passkey/auth-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      })
+
+      const optionsData = await optionsRes.json()
+
+      if (!optionsData.success) {
+        throw new Error(optionsData.error || 'No passkeys found for this user')
+      }
+
+      // In a real implementation, you would use SimpleWebAuthn's browser library here
+      // to complete the authentication
+      // For now, show a message that passkey login requires browser support
+      setError('Passkey login requires browser WebAuthn support. Please use password or OTP.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Passkey login failed')
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md">
@@ -56,16 +159,52 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Choose your login method
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+
+        {/* Login Method Tabs */}
+        <div className="px-6 flex gap-2">
+          <Button
+            type="button"
+            variant={loginMethod === 'password' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setLoginMethod('password')}
+            className="flex-1 gap-2"
+          >
+            <KeyRound className="w-4 h-4" />
+            Password
+          </Button>
+          <Button
+            type="button"
+            variant={loginMethod === 'otp' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setLoginMethod('otp')}
+            className="flex-1 gap-2"
+          >
+            <Mail className="w-4 h-4" />
+            OTP
+          </Button>
+          <Button
+            type="button"
+            variant={loginMethod === 'passkey' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setLoginMethod('passkey')}
+            className="flex-1 gap-2"
+          >
+            <Fingerprint className="w-4 h-4" />
+            Passkey
+          </Button>
+        </div>
+
+        <form onSubmit={loginMethod === 'password' ? handlePasswordLogin : handleOtpLogin}>
+          <CardContent className="space-y-4 mt-4">
             {error && (
               <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
                 {error}
               </div>
             )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -77,28 +216,106 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
-            </div>
+
+            {loginMethod === 'password' && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+              </div>
+            )}
+
+            {loginMethod === 'otp' && (
+              <>
+                {!otpSent ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleRequestOtp}
+                    disabled={otpLoading}
+                  >
+                    {otpLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending OTP...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send OTP to Email
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="otp">Enter 6-digit code</Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="000000"
+                      maxLength={6}
+                      value={formData.otp}
+                      onChange={(e) => setFormData({ ...formData, otp: e.target.value.replace(/\D/g, '') })}
+                      required
+                      className="text-center text-lg tracking-widest"
+                    />
+                    <p className="text-xs text-slate-500 text-center">
+                      Check your email for the code. Expires in 5 minutes.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {loginMethod === 'passkey' && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handlePasskeyLogin}
+                disabled={passkeyLoading}
+              >
+                {passkeyLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Preparing passkey...
+                  </>
+                ) : (
+                  <>
+                    <Fingerprint className="w-4 h-4 mr-2" />
+                    Sign in with Passkey
+                  </>
+                )}
+              </Button>
+            )}
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-            <p className="text-sm text-center text-slate-600">
-              Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-blue-600 hover:underline">
-                Sign up
-              </Link>
-            </p>
+            {loginMethod !== 'passkey' && (
+              <Button type="submit" className="w-full" disabled={loading || (loginMethod === 'otp' && !otpSent)}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </Button>
+            )}
+
+            <div className="text-sm text-center space-y-2">
+              <p>
+                <Link href="/register" className="text-blue-600 hover:underline">
+                  Create an account
+                </Link>
+              </p>
+              <p>
+                <Link href="/auth/forgot-password" className="text-slate-500 hover:underline text-xs">
+                  Forgot password?
+                </Link>
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>
