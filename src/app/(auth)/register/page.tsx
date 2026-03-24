@@ -45,7 +45,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [registeredEmail, setRegisteredEmail] = useState('')
-  const [emailVerified, setEmailVerified] = useState(false)
   const [formData, setFormData] = useState<RegistrationData>({
     email: '',
     password: '',
@@ -174,7 +173,6 @@ export default function RegisterPage() {
       // In a real implementation, this would be triggered by the verification link
       // For now, we'll simulate verification after a delay
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setEmailVerified(true)
       setCurrentStep('documents')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
@@ -439,7 +437,7 @@ export default function RegisterPage() {
             </>
           ) : (
             <>
-              I've Verified My Email
+              I&apos;ve Verified My Email
               <ArrowRight className="w-4 h-4 ml-2" />
             </>
           )}
@@ -582,7 +580,7 @@ export default function RegisterPage() {
             {renderStep()}
           </CardContent>
 
-          {currentStep !== 'verification' && currentStep !== 'complete' && (
+          {['account', 'personal', 'business', 'payout', 'documents'].includes(currentStep) && (
             <CardFooter className="flex justify-between">
               {stepIndex > 0 ? (
                 <Button type="button" variant="outline" onClick={handleBack}>

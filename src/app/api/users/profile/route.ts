@@ -6,7 +6,14 @@ import { z } from 'zod'
 const updateProfileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
   email: z.string().email('Invalid email address').optional(),
-  phone: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid Bangladesh phone number').optional().or(z.literal(''))
+  phone: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid Bangladesh phone number').optional().or(z.literal('')),
+  nid: z.string().max(20).optional().or(z.literal('')),
+  businessName: z.string().max(200).optional().or(z.literal('')),
+  businessAddress: z.string().max(500).optional().or(z.literal('')),
+  bkashNumber: z.string().regex(/^01[3-9]\d{8}$/, 'Invalid bKash number').optional().or(z.literal('')),
+  bankName: z.string().max(100).optional().or(z.literal('')),
+  bankAccount: z.string().max(50).optional().or(z.literal('')),
+  bankRouting: z.string().max(20).optional().or(z.literal(''))
 })
 
 export async function GET() {
@@ -27,6 +34,10 @@ export async function GET() {
         name: true,
         phone: true,
         plan: true,
+        kycLevel: true,
+        nid: true,
+        businessName: true,
+        businessAddress: true,
         bkashNumber: true,
         bankAccount: true,
         bankName: true,
@@ -53,12 +64,17 @@ export async function GET() {
         name: user.name,
         phone: user.phone,
         plan: user.plan,
+        kycLevel: user.kycLevel,
+        nid: user.nid || '',
+        businessName: user.businessName || '',
+        businessAddress: user.businessAddress || '',
         bkashNumber: user.bkashNumber || '',
         bankAccount: user.bankAccount || '',
         bankName: user.bankName || '',
         bankRouting: user.bankRouting || '',
         bkashVerified: user.bkashVerified || false,
         bankVerified: user.bankVerified || false,
+        emailVerified: user.emailVerified,
         createdAt: user.createdAt
       }
     })
@@ -99,7 +115,8 @@ export async function PATCH(request: NextRequest) {
         email: true,
         name: true,
         phone: true,
-        plan: true
+        plan: true,
+        kycLevel: true
       }
     })
 
