@@ -3,19 +3,26 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Link as LinkIcon, CreditCard, Wallet, TrendingUp, ArrowUpRight } from 'lucide-react'
+import { Users, Link as LinkIcon, CreditCard, Wallet, ArrowUpRight } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Loader2 } from 'lucide-react'
 
 interface DashboardStats {
-  totalUsers: number
-  totalPaymentLinks: number
-  totalTransactions: number
-  successfulTransactions: number
-  pendingPayouts: number
-  totalVolume: number
-  totalRevenue: number
+  overview: {
+    totalUsers: number
+    totalTransactions: number
+    successfulTransactions: number
+    failedTransactions: number
+    pendingPayoutsCount: number
+    totalPayouts: number
+  }
+  volume: {
+    totalVolume: number
+    totalNetAmount: number
+    platformRevenue: number
+    pendingPayoutsAmount: number
+  }
   recentTransactions: Array<{
     id: string
     amount: number
@@ -47,11 +54,11 @@ export default function AdminDashboardPage() {
     setError(null)
     try {
       const res = await fetch('/api/admin/analytics/dashboard')
-      const data = await res.json()
-      if (data.success) {
-        setStats(data.data)
+      const result = await res.json()
+      if (result.success) {
+        setStats(result.data)
       } else {
-        setError(data.error || 'Failed to fetch dashboard data')
+        setError(result.error || 'Failed to fetch dashboard data')
       }
     } catch (err) {
       setError('Failed to fetch dashboard data')
@@ -101,7 +108,7 @@ export default function AdminDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.totalUsers}</div>
+            <div className="text-3xl font-bold">{stats.overview.totalUsers}</div>
           </CardContent>
         </Card>
 
@@ -112,7 +119,7 @@ export default function AdminDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.totalPaymentLinks}</div>
+            <div className="text-3xl font-bold">{stats.overview.totalPayouts}</div>
           </CardContent>
         </Card>
 
@@ -123,7 +130,7 @@ export default function AdminDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.totalTransactions}</div>
+            <div className="text-3xl font-bold">{stats.overview.totalTransactions}</div>
           </CardContent>
         </Card>
 
@@ -134,18 +141,18 @@ export default function AdminDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">{stats.pendingPayouts}</div>
+            <div className="text-3xl font-bold text-yellow-600">{stats.overview.pendingPayoutsCount}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" /> Platform Revenue
+              Platform Revenue
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
+            <div className="text-3xl font-bold text-green-600">{formatCurrency(stats.volume.platformRevenue)}</div>
           </CardContent>
         </Card>
       </div>
@@ -159,7 +166,7 @@ export default function AdminDashboardPage() {
               <p className="text-sm text-green-700">All successful transactions</p>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-green-600">{formatCurrency(stats.totalVolume)}</div>
+              <div className="text-3xl font-bold text-green-600">{formatCurrency(stats.volume.totalVolume)}</div>
             </div>
           </div>
         </CardContent>
