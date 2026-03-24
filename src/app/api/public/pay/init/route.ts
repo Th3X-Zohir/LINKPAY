@@ -198,11 +198,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }
     }
 
-    // Update payment link with gateway info
+    // Update payment link with gateway info - store the actual transaction ID from the gateway
     await db.paymentLink.update({
       where: { id: paymentLink.id },
       data: {
-        aamarPayId: gatewayName === 'aamarpay' ? paymentId : paymentLink.aamarPayId,
+        aamarPayId: paymentId || paymentLink.aamarPayId,
         aamarPayUrl: paymentUrl
       }
     })
