@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { unlink } from 'fs/promises'
 import { join } from 'path'
+import { isAdmin } from '@/lib/admin'
 
 interface ApiResponse<T> {
   success: boolean
@@ -25,6 +26,7 @@ export async function GET(
     }
 
     const { id } = await params
+    const userIsAdmin = await isAdmin()
 
     const document = await db.document.findUnique({
       where: { id }
@@ -37,7 +39,7 @@ export async function GET(
       )
     }
 
-    if (document.userId !== session.user.id && !session.user.isAdmin) {
+    if (document.userId !== session.user.id && !userIsAdmin) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -83,6 +85,7 @@ export async function DELETE(
     }
 
     const { id } = await params
+    const userIsAdmin = await isAdmin()
 
     const document = await db.document.findUnique({
       where: { id }
@@ -95,7 +98,7 @@ export async function DELETE(
       )
     }
 
-    if (document.userId !== session.user.id && !session.user.isAdmin) {
+    if (document.userId !== session.user.id && !userIsAdmin) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }

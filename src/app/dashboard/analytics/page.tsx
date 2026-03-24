@@ -47,9 +47,16 @@ interface AnalyticsData {
 
 const COLORS = ['#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444']
 
+function ChartSkeleton() {
+  return (
+    <div className="h-[300px] animate-pulse bg-slate-100 rounded-lg" />
+  )
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAnalytics()
@@ -57,13 +64,21 @@ export default function AnalyticsPage() {
 
   async function fetchAnalytics() {
     try {
+      setLoading(true)
       const res = await fetch('/api/users/me/analytics')
       const result = await res.json()
-      if (result.success) {
+
+      if (result?.success && result.data) {
         setData(result.data)
+        setError(null)
+      } else {
+        setError(result?.error || 'Failed to load analytics')
+        setData(null)
       }
-    } catch (error) {
-      console.error('Failed to fetch analytics:', error)
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err)
+      setError('Failed to load analytics')
+      setData(null)
     } finally {
       setLoading(false)
     }
@@ -86,11 +101,28 @@ export default function AnalyticsPage() {
             </Card>
           ))}
         </div>
+        <ChartSkeleton />
       </div>
     )
   }
 
-  const stats = data?.overview || {
+  if (error || !data) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
+          <p className="text-slate-600">Track your earnings and performance</p>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-slate-500">{error || 'No analytics data available'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const stats = data.overview || {
     totalEarnings: 0,
     totalVolume: 0,
     totalFees: 0,
@@ -99,13 +131,13 @@ export default function AnalyticsPage() {
     successRate: 0
   }
 
-  const chartData = data?.dailyEarnings || []
-  const transactionChartData = data?.dailyTransactions || []
+  const chartData = data.dailyEarnings || []
+  const transactionChartData = data.dailyTransactions || []
 
-  const pieData = data?.feeBreakdown ? [
-    { name: 'Platform Fee (0.75%)', value: data.feeBreakdown.platformFee },
-    { name: 'Gateway Fee (2.55%)', value: data.feeBreakdown.gatewayFee },
-    { name: 'You Receive', value: stats.totalVolume - data.feeBreakdown.platformFee - data.feeBreakdown.gatewayFee }
+  const pieData = data.feeBreakdown ? [
+    { name: 'Platform Fee (0.75%)', value: data.feeBreakdown.platformFee || 0 },
+    { name: 'Gateway Fee (2.55%)', value: data.feeBreakdown.gatewayFee || 0 },
+    { name: 'You Receive', value: Math.max(0, (stats.totalVolume || 0) - (data.feeBreakdown.platformFee || 0) - (data.feeBreakdown.gatewayFee || 0)) }
   ] : []
 
   return (
@@ -189,15 +221,27 @@ export default function AnalyticsPage() {
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      tickFormatter={(value) => {
+                        try {
+                          return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        } catch {
+                          return value
+                        }
+                      }}
                     />
                     <YAxis
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => `৳${(value / 100).toLocaleString()}`}
                     />
                     <Tooltip
-                      formatter={(value) => [formatCurrency(Number(value) || 0) as string, 'Earnings']}
-                      labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      formatter={(value) => [formatCurrency(Number(value) || 0), 'Earnings']}
+                      labelFormatter={(label) => {
+                        try {
+                          return new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                        } catch {
+                          return label
+                        }
+                      }}
                     />
                     <Line
                       type="monotone"
@@ -220,7 +264,7 @@ export default function AnalyticsPage() {
             <CardTitle>Fee Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
-            {pieData.length === 0 ? (
+            {pieData.length === 0 || pieData.every(d => d.value === 0) ? (
               <div className="h-[300px] flex items-center justify-center text-slate-500">
                 <div className="text-center">
                   <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -247,7 +291,7 @@ export default function AnalyticsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value) => formatCurrency(Number(value) || 0) as string}
+                      formatter={(value) => formatCurrency(Number(value) || 0)}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -262,11 +306,11 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-600">Platform Fee (0.75%)</span>
-                <span className="font-semibold text-red-600">-{formatCurrency(data?.feeBreakdown?.platformFee || 0)}</span>
+                <span className="font-semibold text-red-600">-{formatCurrency(data.feeBreakdown?.platformFee || 0)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-600">Gateway Fee (2.55%)</span>
-                <span className="font-semibold text-red-600">-{formatCurrency(data?.feeBreakdown?.gatewayFee || 0)}</span>
+                <span className="font-semibold text-red-600">-{formatCurrency(data.feeBreakdown?.gatewayFee || 0)}</span>
               </div>
               <div className="flex justify-between items-center text-sm border-t pt-2 font-semibold">
                 <span>You Receive</span>
@@ -291,12 +335,24 @@ export default function AnalyticsPage() {
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    tickFormatter={(value) => {
+                      try {
+                        return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      } catch {
+                        return value
+                      }
+                    }}
                   />
                   <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                   <Tooltip
                     formatter={(value) => [`${value || 0} transactions`]}
-                    labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    labelFormatter={(label) => {
+                      try {
+                        return new Date(label).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                      } catch {
+                        return label
+                      }
+                    }}
                   />
                   <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -312,7 +368,7 @@ export default function AnalyticsPage() {
           <CardTitle>Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          {!data?.topTransactions || data.topTransactions.length === 0 ? (
+          {!data.topTransactions || data.topTransactions.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
               <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p>No transactions yet</p>

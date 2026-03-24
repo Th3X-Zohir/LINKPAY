@@ -27,6 +27,11 @@ export interface AamarPayPaymentResponse {
 
 export async function createAamarPayPayment(request: AamarPayPaymentRequest): Promise<AamarPayPaymentResponse> {
   try {
+    // Validate credentials
+    if (!STORE_ID || !SIGNATURE_KEY || !API_KEY) {
+      return { status: 'fail', error: 'Payment gateway not configured' }
+    }
+
     const payload = {
       store_id: STORE_ID,
       signature_key: SIGNATURE_KEY,
@@ -50,17 +55,24 @@ export async function createAamarPayPayment(request: AamarPayPaymentRequest): Pr
       body: JSON.stringify(payload)
     })
 
-    const data = await response.json()
+    const text = await response.text()
+
+    let data: Record<string, unknown>
+    try {
+      data = JSON.parse(text)
+    } catch {
+      return { status: 'fail', error: `Invalid response from payment gateway: ${text.substring(0, 100)}` }
+    }
 
     if (data.result !== 'true' && data.result !== true) {
-      return { status: 'fail', error: data.error_message || 'Payment initiation failed' }
+      return { status: 'fail', error: (data.error_message as string) || 'Payment initiation failed' }
     }
 
     return {
       status: 'success',
-      payment_id: data.payment_id,
-      payment_url: data.payment_url,
-      execute_url: data.execute_url
+      payment_id: data.payment_id as string,
+      payment_url: data.payment_url as string,
+      execute_url: data.execute_url as string
     }
   } catch (error) {
     console.error('aamarPay error:', error)

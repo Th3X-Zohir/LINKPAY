@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import PDFDocument from 'pdfkit'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { generateInvoiceNumber } from '@/lib/invoice-number'
+import { isAdmin } from '@/lib/admin'
 
 interface ApiResponse<T> {
   success: boolean
@@ -301,6 +302,7 @@ export async function GET(
     }
 
     const { id: transactionId } = await params
+    const userIsAdmin = await isAdmin()
 
     const transaction = await db.transaction.findUnique({
       where: { id: transactionId },
@@ -326,7 +328,7 @@ export async function GET(
     }
 
     // Check ownership (user owns the transaction or is admin)
-    if (transaction.userId !== session.user.id && !session.user.isAdmin) {
+    if (transaction.userId !== session.user.id && !userIsAdmin) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }

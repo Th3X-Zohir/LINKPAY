@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { isAdmin } from '@/lib/admin'
 
 const updateDisputeSchema = z.object({
   status: z.enum(['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED', 'CLOSED']).optional(),
@@ -30,6 +31,7 @@ export async function GET(
     }
 
     const { id } = await params
+    const userIsAdmin = await isAdmin()
 
     const dispute = await db.dispute.findUnique({
       where: { id },
@@ -48,7 +50,7 @@ export async function GET(
     }
 
     // Check ownership (user owns the dispute or is admin)
-    if (dispute.userId !== session.user.id && !session.user.isAdmin) {
+    if (dispute.userId !== session.user.id && !userIsAdmin) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -82,6 +84,7 @@ export async function PATCH(
     }
 
     const { id } = await params
+    const userIsAdmin = await isAdmin()
 
     const dispute = await db.dispute.findUnique({
       where: { id }
@@ -96,11 +99,10 @@ export async function PATCH(
 
     // Check permissions
     const isOwner = dispute.userId === session.user.id
-    const isAdmin = session.user.isAdmin
 
     // Regular users can only update their own disputes with OPEN or UNDER_REVIEW status
     // and can only update the description
-    if (!isAdmin) {
+    if (!userIsAdmin) {
       if (!isOwner) {
         return NextResponse.json(
           { success: false, error: 'Forbidden' },
@@ -137,7 +139,7 @@ export async function PATCH(
       }
     }
 
-    if (parsed.data.adminNotes && isAdmin) {
+    if (parsed.data.adminNotes && userIsAdmin) {
       updateData.adminNotes = parsed.data.adminNotes
     }
 
