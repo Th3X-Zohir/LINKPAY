@@ -54,15 +54,13 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Sign in the user using credentials provider with a dummy password
-    // Since OTP verified the user, we can create a session
-    // Note: This is a simplified approach. In production, you might want to
-    // use a separate OTP-only authentication flow
-
+    // Sign in the user using credentials provider
+    // OTP was verified, so we pass otpVerified flag to skip password check
     const signInResult = await signIn('credentials', {
       email,
-      password: '__otp_verified__', // Dummy password, user authenticated via OTP
-      redirect: false
+      password: '', // Required field but ignored since otpVerified is true
+      redirect: false,
+      otpVerified: true
     })
 
     if (signInResult?.error) {

@@ -24,6 +24,43 @@ export interface PasskeyCredential {
   name?: string
 }
 
+// In-memory challenge store with expiry (use Redis in production)
+// Map<userId, { challenge: string, expiresAt: number }>
+const challengeStore = new Map<string, { challenge: string; expiresAt: number }>()
+
+function setChallenge(userId: string, challenge: string): void {
+  // Challenge expires in 5 minutes
+  challengeStore.set(userId, {
+    challenge,
+    expiresAt: Date.now() + 5 * 60 * 1000
+  })
+}
+
+function getAndDeleteChallenge(userId: string): string | null {
+  const entry = challengeStore.get(userId)
+  if (!entry) return null
+
+  // Check if expired
+  if (Date.now() > entry.expiresAt) {
+    challengeStore.delete(userId)
+    return null
+  }
+
+  // Delete after retrieval (one-time use)
+  challengeStore.delete(userId)
+  return entry.challenge
+}
+
+// Periodic cleanup of expired challenges
+setInterval(() => {
+  const now = Date.now()
+  for (const [userId, entry] of challengeStore.entries()) {
+    if (now > entry.expiresAt) {
+      challengeStore.delete(userId)
+    }
+  }
+}, 60000) // Run every minute
+
 export async function generatePasskeyRegistrationOptions(
   userId: string,
   email: string
@@ -140,6 +177,11 @@ export async function generatePasskeyAuthenticationOptions(
       }))
     })
 
+    // Store the challenge for verification (one-time use)
+    if (options.challenge) {
+      setChallenge(user.id, options.challenge)
+    }
+
     return { success: true, options, userId: user.id }
   } catch (error) {
     console.error('Passkey authentication options error:', error)
@@ -150,10 +192,15 @@ export async function generatePasskeyAuthenticationOptions(
 export async function verifyPasskeyAuthentication(
   userId: string,
   credential: AuthenticationResponseJSON,
-  expectedChallenge: string,
   credentialId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    // Retrieve and delete the challenge (one-time use)
+    const expectedChallenge = getAndDeleteChallenge(userId)
+    if (!expectedChallenge) {
+      return { success: false, error: 'Challenge expired or not found. Please try again.' }
+    }
+
     const passkey = await db.passkey.findFirst({
       where: {
         userId,

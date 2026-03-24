@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import { startAuthentication } from '@simplewebauthn/browser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -123,7 +124,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Get authentication options
+      // Get authentication options from server
       const optionsRes = await fetch('/api/auth/passkey/auth-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,12 +137,35 @@ export default function LoginPage() {
         throw new Error(optionsData.error || 'No passkeys found for this user')
       }
 
-      // In a real implementation, you would use SimpleWebAuthn's browser library here
-      // to complete the authentication
-      // For now, show a message that passkey login requires browser support
-      setError('Passkey login requires browser WebAuthn support. Please use password or OTP.')
+      // Use SimpleWebAuthn browser library to complete authentication
+      const credential = await startAuthentication(optionsData.data)
+
+      // Send the credential to server for verification
+      const verifyRes = await fetch('/api/auth/passkey/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credential,
+          userId: optionsData.userId,
+          credentialId: credential.id
+        })
+      })
+
+      const verifyData = await verifyRes.json()
+
+      if (!verifyData.success) {
+        throw new Error(verifyData.error || 'Passkey verification failed')
+      }
+
+      // Success - redirect to dashboard
+      router.push('/dashboard')
+      router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Passkey login failed')
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        setError('Authentication cancelled or rejected. Please try again.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Passkey login failed')
+      }
     } finally {
       setPasskeyLoading(false)
     }

@@ -6,9 +6,9 @@ import { db } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { credential, challenge, userId, credentialId } = body
+    const { credential, userId, credentialId } = body
 
-    if (!credential || !challenge || !userId || !credentialId) {
+    if (!credential || !userId || !credentialId) {
       return NextResponse.json(
         { success: false, error: 'Invalid request' },
         { status: 400 }
@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
     const result = await verifyPasskeyAuthentication(
       userId,
       credential,
-      challenge,
       credentialId
     )
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { encryptNid, decryptNid } from '@/lib/encryption'
 
 const updateProfileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
@@ -15,6 +16,16 @@ const updateProfileSchema = z.object({
   bankAccount: z.string().max(50).optional().or(z.literal('')),
   bankRouting: z.string().max(20).optional().or(z.literal(''))
 })
+
+/**
+ * Mask NID for display - shows only last 4 digits
+ * Example: "1234567890123" -> "************0123"
+ */
+function maskNid(nid: string | null | undefined): string {
+  if (!nid) return ''
+  if (nid.length <= 4) return '****'
+  return '*'.repeat(nid.length - 4) + nid.slice(-4)
+}
 
 export async function GET() {
   try {
@@ -56,6 +67,9 @@ export async function GET() {
       )
     }
 
+    // Decrypt NID if it exists (stored encrypted)
+    const decryptedNid = user.nid ? decryptNid(user.nid) : null
+
     return NextResponse.json({
       success: true,
       data: {
@@ -65,11 +79,11 @@ export async function GET() {
         phone: user.phone,
         plan: user.plan,
         kycLevel: user.kycLevel,
-        nid: user.nid || '',
+        nid: maskNid(decryptedNid), // Return masked NID for display
         businessName: user.businessName || '',
         businessAddress: user.businessAddress || '',
         bkashNumber: user.bkashNumber || '',
-        bankAccount: user.bankAccount || '',
+        bankAccount: user.bankAccount ? '****' + user.bankAccount.slice(-4) : '', // Masked
         bankName: user.bankName || '',
         bankRouting: user.bankRouting || '',
         bkashVerified: user.bkashVerified || false,
@@ -107,9 +121,17 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
+    // Prepare data for update - encrypt NID if provided
+    const updateData: Record<string, unknown> = { ...parsed.data }
+
+    // Encrypt NID before storing
+    if (updateData.nid) {
+      updateData.nid = encryptNid(updateData.nid as string)
+    }
+
     const user = await db.user.update({
       where: { id: session.user.id },
-      data: parsed.data,
+      data: updateData,
       select: {
         id: true,
         email: true,

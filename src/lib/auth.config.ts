@@ -7,7 +7,8 @@ import bcrypt from 'bcryptjs'
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  passkeyVerified: z.boolean().optional()
+  passkeyVerified: z.boolean().optional(),
+  otpVerified: z.boolean().optional()
 })
 
 export const authConfig: NextAuthConfig = {
@@ -45,7 +46,7 @@ export const authConfig: NextAuthConfig = {
         const parsed = credentialsSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const { email, password, passkeyVerified } = parsed.data
+        const { email, password, passkeyVerified, otpVerified } = parsed.data
 
         const user = await db.user.findUnique({
           where: { email }
@@ -53,8 +54,8 @@ export const authConfig: NextAuthConfig = {
 
         if (!user) return null
 
-        // If passkey was verified, skip password check
-        if (passkeyVerified) {
+        // If passkey or OTP was verified, skip password check
+        if (passkeyVerified || otpVerified) {
           return {
             id: user.id,
             email: user.email,
