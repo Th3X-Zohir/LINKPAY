@@ -348,7 +348,7 @@ export default function PaymentLinkDetailPage() {
                 )}
 
                 <div>
-                  <p className="text-sm text-slate-500 mb-1">aamarPay ID</p>
+                  <p className="text-sm text-slate-500 mb-1">Gateway ID</p>
                   <p className="font-medium text-xs">{paymentLink.aamarPayId || 'N/A'}</p>
                 </div>
               </>

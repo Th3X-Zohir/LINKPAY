@@ -16,7 +16,8 @@ export function InvoiceActions({ transactionId, customerEmail }: InvoiceActionsP
   const handleDownload = async () => {
     setLoading('download')
     try {
-      const response = await fetch(`/api/invoices/${transactionId}`)
+      // Use /api/transactions/[id]/invoice which handles generation
+      const response = await fetch(`/api/transactions/${transactionId}/invoice`)
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to generate invoice')
@@ -43,7 +44,7 @@ export function InvoiceActions({ transactionId, customerEmail }: InvoiceActionsP
   const handleEmail = async () => {
     setLoading('email')
     try {
-      const response = await fetch(`/api/invoices/${transactionId}/email`, {
+      const response = await fetch(`/api/transactions/${transactionId}/invoice/email`, {
         method: 'POST'
       })
       const data = await response.json()

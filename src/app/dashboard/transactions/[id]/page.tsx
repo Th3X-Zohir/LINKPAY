@@ -83,7 +83,8 @@ export default function TransactionDetailPage() {
     if (!transaction) return
     setDownloading(true)
     try {
-      const res = await fetch(`/api/transactions/${transaction.id}/invoice/download`)
+      // Use /invoice endpoint which generates invoice if not exists
+      const res = await fetch(`/api/transactions/${transaction.id}/invoice`)
       if (res.ok) {
         const blob = await res.blob()
         const url = window.URL.createObjectURL(blob)

@@ -21,6 +21,13 @@ interface BkashPayoutResponse {
 let cachedToken: { token: string; expiresAt: number } | null = null
 
 export async function getBkashToken(): Promise<BkashTokenResponse> {
+  // Check if bKash credentials are configured
+  if (!BKASH_USERNAME || !BKASH_PASSWORD || !BKASH_APP_KEY || !BKASH_APP_SECRET ||
+      BKASH_USERNAME === 'your_bkash_username' || BKASH_APP_KEY === 'your_bkash_app_key') {
+    console.error('bKash credentials not properly configured')
+    return { status: 'fail', error: 'bKash is not configured. Please contact support or use bank withdrawal.' }
+  }
+
   if (cachedToken && cachedToken.expiresAt > Date.now()) {
     return { status: 'success', id_token: cachedToken.token, token_type: 'Bearer' }
   }
@@ -42,7 +49,7 @@ export async function getBkashToken(): Promise<BkashTokenResponse> {
     const data = await response.json()
 
     if (data.status_code !== '0000' && data.status_code !== 200) {
-      return { status: 'fail', error: data.status_message || 'Token generation failed' }
+      return { status: 'fail', error: data.status_message || 'bKash token generation failed' }
     }
 
     cachedToken = {
