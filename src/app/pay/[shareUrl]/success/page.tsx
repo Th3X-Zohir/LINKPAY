@@ -76,21 +76,23 @@ function PaymentSuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/50 to-white flex items-center justify-center p-4">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Verifying payment...</p>
+          <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-200/50">
+            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+          </div>
+          <p className="text-slate-600 font-medium">Verifying payment...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50/50 to-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-10 h-10 text-green-600" />
+        <div className="bg-white rounded-2xl shadow-xl shadow-green-200/30 border border-green-100 overflow-hidden p-8 text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-green-200/50">
+            <CheckCircle className="w-12 h-12 text-green-600" />
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h1>

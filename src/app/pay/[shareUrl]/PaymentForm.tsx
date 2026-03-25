@@ -71,13 +71,13 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header with Business Branding */}
-      <header className="bg-white border-b border-slate-200 px-4 py-4">
+      <header className="bg-white border-b border-slate-100 px-4 py-4 shadow-sm">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           {hasCustomBranding ? (
             // Custom business branding
             <div className="flex items-center gap-3">
               {paymentLink.user.businessLogo ? (
-                <div className="w-10 h-10 relative rounded-lg overflow-hidden">
+                <div className="w-10 h-10 relative rounded-lg overflow-hidden shadow-sm">
                   <Image
                     src={paymentLink.user.businessLogo}
                     alt={sellerName}
@@ -87,7 +87,7 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
                   />
                 </div>
               ) : (
-                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
                   <Building2 className="w-5 h-5 text-white" />
                 </div>
               )}
@@ -104,7 +104,7 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
           ) : (
             // Default LinkPay branding
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
                 <span className="text-white font-bold text-sm">LP</span>
               </div>
               <span className="font-semibold text-slate-900">LinkPay BD</span>
@@ -116,13 +116,13 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
       {/* Main Content */}
       <main className="max-w-lg mx-auto px-4 py-8">
         {/* Payment Details Card */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 overflow-hidden mb-6 border border-slate-100">
           {/* Card Header with Seller Info */}
-          <div className="bg-blue-600 px-6 py-4">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-6 py-5">
             <p className="text-blue-100 text-sm font-medium">Payment Request From</p>
             <div className="flex items-center gap-3 mt-2">
               {paymentLink.user.businessLogo ? (
-                <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-white">
+                <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-white shadow-lg">
                   <Image
                     src={paymentLink.user.businessLogo}
                     alt={sellerName}
@@ -132,7 +132,7 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
                   />
                 </div>
               ) : (
-                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
               )}
@@ -149,9 +149,9 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
           </div>
 
           {/* Amount */}
-          <div className="px-6 py-6 border-b border-slate-100">
+          <div className="px-6 py-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white">
             <p className="text-slate-500 text-sm mb-1">Amount to Pay</p>
-            <p className="text-4xl font-bold text-slate-900">
+            <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
               {formatCurrency(paymentLink.amount)}
             </p>
           </div>
@@ -209,7 +209,7 @@ export function PaymentForm({ paymentLink }: PaymentFormProps) {
             type="submit"
             aria-label="Pay now"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-4 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-blue-400 disabled:to-blue-400 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:scale-[1.02] active:scale-[0.98]"
           >
             {loading ? (
               <>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -74,14 +75,9 @@ export default function CreatePaymentLinkPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
             {error && (
-              <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
-                {error}
-              </div>
-            )}
-            {error && (
-              <Button onClick={() => setError('')} variant="outline" className="mt-2">
-                Try Again
-              </Button>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <div className="space-y-2">

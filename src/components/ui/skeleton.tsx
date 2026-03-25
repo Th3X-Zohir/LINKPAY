@@ -1,7 +1,13 @@
+import { Card, CardContent, CardHeader } from './card'
+
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse rounded-md bg-slate-200 ${className || ''}`}
+      className={`animate-pulse rounded-md bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:200%_100%] ${className || ''}`}
+      style={{
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.5s ease-in-out infinite',
+      }}
     />
   )
 }
@@ -36,34 +42,40 @@ export function TableRowSkeleton() {
 
 export function PaymentLinkCardSkeleton() {
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-8 w-32" />
+    <Card className="border-0 shadow-sm overflow-hidden">
+      <div className="px-6 py-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-6 w-56" />
+            <Skeleton className="h-8 w-36" />
+          </div>
+          <Skeleton className="h-8 w-8 rounded-lg" />
         </div>
-        <Skeleton className="h-8 w-8 rounded" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-3 w-24" />
+        </div>
       </div>
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-3 w-28" />
-        <Skeleton className="h-3 w-20" />
-      </div>
-    </div>
+    </Card>
   )
 }
 
 export function DashboardStatsSkeleton() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-white rounded-lg border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-2">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-4 w-4 rounded" />
-          </div>
-          <Skeleton className="h-8 w-24" />
-        </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[...Array(3)].map((_, i) => (
+        <Card key={i} className="relative overflow-hidden border-0 shadow-sm">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-50" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
+          </CardHeader>
+          <CardContent className="relative">
+            <Skeleton className="h-9 w-32 mb-2" />
+            <Skeleton className="h-3 w-28" />
+          </CardContent>
+        </Card>
       ))}
     </div>
   )

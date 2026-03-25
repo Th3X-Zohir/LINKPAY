@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle, Mail, ArrowRight, ArrowLeft, Shield, Wallet, User, Building, FileText, Loader2 } from 'lucide-react'
 
 type RegistrationStep = 'account' | 'personal' | 'business' | 'payout' | 'verification' | 'documents' | 'complete'
@@ -259,7 +260,7 @@ export default function RegisterPage() {
 
   // Step progress indicator
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center gap-2 mb-8">
+    <div className="flex items-center justify-center gap-1">
       {STEPS.map((step, index) => {
         const Icon = step.icon
         const isActive = step.id === currentStep
@@ -270,13 +271,13 @@ export default function RegisterPage() {
             <div
               aria-label={`Step ${index + 1} of ${STEPS.length}: ${step.label}`}
               className={`
-              flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
-              ${isActive ? 'border-blue-600 bg-blue-600 text-white' : isCompleted ? 'border-green-600 bg-green-600 text-white' : 'border-slate-300 text-slate-400'}
-            `}>
-              {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                flex items-center justify-center w-9 h-9 rounded-full border-2 transition-all duration-300
+                ${isActive ? 'border-blue-600 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30' : isCompleted ? 'border-green-600 bg-gradient-to-br from-green-500 to-green-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-400'}
+              `}>
+              {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
             </div>
             {index < STEPS.length - 1 && (
-              <div className={`w-8 h-0.5 mx-1 ${index < stepIndex ? 'bg-green-600' : 'bg-slate-300'}`} />
+              <div className={`w-6 h-0.5 mx-0.5 transition-all duration-300 ${index < stepIndex ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-slate-200'}`} />
             )}
           </div>
         )
@@ -288,7 +289,7 @@ export default function RegisterPage() {
   const renderAccountStep = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
+        <Label htmlFor="email" className="text-slate-700 font-medium">Email Address</Label>
         <Input
           id="email"
           type="email"
@@ -297,11 +298,12 @@ export default function RegisterPage() {
           onChange={(e) => updateFormData('email', e.target.value)}
           required
           aria-required="true"
+          className="h-11"
         />
-        <p className="text-sm text-slate-500">This will be used for login and verification</p>
+        <p className="text-xs text-slate-500">This will be used for login and verification</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
         <Input
           id="password"
           type="password"
@@ -311,10 +313,11 @@ export default function RegisterPage() {
           required
           aria-required="true"
           minLength={6}
+          className="h-11"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="confirmPassword" className="text-slate-700 font-medium">Confirm Password</Label>
         <Input
           id="confirmPassword"
           type="password"
@@ -324,6 +327,7 @@ export default function RegisterPage() {
           required
           aria-required="true"
           minLength={6}
+          className="h-11"
         />
       </div>
     </div>
@@ -333,7 +337,7 @@ export default function RegisterPage() {
   const renderPersonalStep = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Full Name</Label>
+        <Label htmlFor="name" className="text-slate-700 font-medium">Full Name</Label>
         <Input
           id="name"
           type="text"
@@ -342,10 +346,11 @@ export default function RegisterPage() {
           onChange={(e) => updateFormData('name', e.target.value)}
           required
           aria-required="true"
+          className="h-11"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number (bKash)</Label>
+        <Label htmlFor="phone" className="text-slate-700 font-medium">Phone Number (bKash)</Label>
         <Input
           id="phone"
           type="tel"
@@ -354,11 +359,12 @@ export default function RegisterPage() {
           onChange={(e) => updateFormData('phone', e.target.value)}
           required
           aria-required="true"
+          className="h-11"
         />
-        <p className="text-sm text-slate-500">Enter your bKash registered number for payouts</p>
+        <p className="text-xs text-slate-500">Enter your bKash registered number for payouts</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="nid">National ID (NID)</Label>
+        <Label htmlFor="nid" className="text-slate-700 font-medium">National ID (NID)</Label>
         <Input
           id="nid"
           type="text"
@@ -367,8 +373,9 @@ export default function RegisterPage() {
           onChange={(e) => updateFormData('nid', e.target.value)}
           required
           aria-required="true"
+          className="h-11"
         />
-        <p className="text-sm text-slate-500">Required for KYC verification (FULL level)</p>
+        <p className="text-xs text-slate-500">Required for KYC verification (FULL level)</p>
       </div>
     </div>
   )
@@ -376,29 +383,32 @@ export default function RegisterPage() {
   // Step 3: Business Info
   const renderBusinessStep = () => (
     <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>Optional:</strong> Add your business details to get a BUSINESS badge and appear more professional to clients.
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
+        <p className="text-sm text-amber-800">
+          <strong>Optional:</strong> Add your business details to get a{' '}
+          <span className="font-semibold text-amber-900">BUSINESS</span> badge and appear more professional to clients.
         </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="businessName">Business Name</Label>
+        <Label htmlFor="businessName" className="text-slate-700 font-medium">Business Name</Label>
         <Input
           id="businessName"
           type="text"
           placeholder="Rahul's Design Studio"
           value={formData.businessName}
           onChange={(e) => updateFormData('businessName', e.target.value)}
+          className="h-11"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="businessAddress">Business Address</Label>
+        <Label htmlFor="businessAddress" className="text-slate-700 font-medium">Business Address</Label>
         <Input
           id="businessAddress"
           type="text"
           placeholder="House 12, Road 5, Dhanmondi, Dhaka"
           value={formData.businessAddress}
           onChange={(e) => updateFormData('businessAddress', e.target.value)}
+          className="h-11"
         />
       </div>
     </div>
@@ -408,7 +418,7 @@ export default function RegisterPage() {
   const renderPayoutStep = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="bkashNumber">bKash Number (Primary)</Label>
+        <Label htmlFor="bkashNumber" className="text-slate-700 font-medium">bKash Number (Primary)</Label>
         <Input
           id="bkashNumber"
           type="tel"
@@ -417,43 +427,47 @@ export default function RegisterPage() {
           onChange={(e) => updateFormData('bkashNumber', e.target.value)}
           required
           aria-required="true"
+          className="h-11"
         />
-        <p className="text-sm text-slate-500">Your earnings will be sent to this number</p>
+        <p className="text-xs text-slate-500">Your earnings will be sent to this number</p>
       </div>
 
-      <div className="border-t pt-4 mt-4">
-        <h4 className="font-medium mb-4 flex items-center gap-2">
-          <Building className="w-4 h-4" /> Bank Account (Optional)
+      <div className="border-t border-slate-100 pt-4 mt-4">
+        <h4 className="font-medium mb-4 flex items-center gap-2 text-slate-700">
+          <Building className="w-4 h-4 text-slate-500" /> Bank Account (Optional)
         </h4>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="bankName">Bank Name</Label>
+            <Label htmlFor="bankName" className="text-slate-700 font-medium">Bank Name</Label>
             <Input
               id="bankName"
               type="text"
               placeholder="e.g., Dhaka Bank"
               value={formData.bankName}
               onChange={(e) => updateFormData('bankName', e.target.value)}
+              className="h-11"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bankAccount">Account Number</Label>
+            <Label htmlFor="bankAccount" className="text-slate-700 font-medium">Account Number</Label>
             <Input
               id="bankAccount"
               type="text"
               placeholder="Account number"
               value={formData.bankAccount}
               onChange={(e) => updateFormData('bankAccount', e.target.value)}
+              className="h-11"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bankRouting">Routing Number</Label>
+            <Label htmlFor="bankRouting" className="text-slate-700 font-medium">Routing Number</Label>
             <Input
               id="bankRouting"
               type="text"
               placeholder="Routing number"
               value={formData.bankRouting}
               onChange={(e) => updateFormData('bankRouting', e.target.value)}
+              className="h-11"
             />
           </div>
         </div>
@@ -464,19 +478,19 @@ export default function RegisterPage() {
   // Step 5: Email Verification
   const renderVerificationStep = () => (
     <div className="text-center py-4">
-      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Mail className="w-8 h-8 text-blue-600" />
+      <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200/50">
+        <Mail className="w-10 h-10 text-blue-600" />
       </div>
       <h2 className="text-xl font-bold text-slate-900 mb-2">Verify Your Email</h2>
-      <p className="text-slate-600 mb-6">
+      <p className="text-slate-600 mb-4">
         We&apos;ve sent a verification link to<br />
-        <strong>{registeredEmail}</strong>
+        <strong className="text-blue-600">{registeredEmail}</strong>
       </p>
       <p className="text-sm text-slate-500 mb-6">
         Click the link in your email to verify your account and continue setup.
       </p>
       <div className="space-y-3">
-        <Button onClick={handleVerifyEmail} disabled={loading} className="w-full">
+        <Button onClick={handleVerifyEmail} disabled={loading} className="w-full h-11 gap-2">
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -485,7 +499,7 @@ export default function RegisterPage() {
           ) : (
             <>
               I&apos;ve Verified My Email
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="w-4 h-4" />
             </>
           )}
         </Button>
@@ -506,14 +520,14 @@ export default function RegisterPage() {
   // Step 6: Documents
   const renderDocumentsStep = () => (
     <div className="space-y-4">
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
         <p className="text-sm text-amber-800">
           <strong>Important:</strong> Upload a clear photo of your NID (front and back) to complete KYC verification and unlock all features.
         </p>
       </div>
       <div className="space-y-4">
         <div
-          className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer bg-slate-50/50"
           role="button"
           tabIndex={0}
           onClick={() => nidFrontInputRef.current?.click()}
@@ -521,8 +535,8 @@ export default function RegisterPage() {
           aria-label="Upload NID Front"
         >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600">
-            {selectedDocuments.nidFront ? `Selected: ${selectedDocuments.nidFront.name}` : 'Upload NID Front'}
+          <p className="text-sm text-slate-600 font-medium">
+            {selectedDocuments.nidFront ? selectedDocuments.nidFront.name : 'Upload NID Front'}
           </p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
         </div>
@@ -537,7 +551,7 @@ export default function RegisterPage() {
           }}
         />
         <div
-          className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer bg-slate-50/50"
           role="button"
           tabIndex={0}
           onClick={() => nidBackInputRef.current?.click()}
@@ -545,8 +559,8 @@ export default function RegisterPage() {
           aria-label="Upload NID Back"
         >
           <FileText className="w-10 h-10 text-slate-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600">
-            {selectedDocuments.nidBack ? `Selected: ${selectedDocuments.nidBack.name}` : 'Upload NID Back'}
+          <p className="text-sm text-slate-600 font-medium">
+            {selectedDocuments.nidBack ? selectedDocuments.nidBack.name : 'Upload NID Back'}
           </p>
           <p className="text-xs text-slate-400">JPG, PNG or PDF (max 10MB)</p>
         </div>
@@ -569,30 +583,30 @@ export default function RegisterPage() {
 
   // Complete
   const renderCompleteStep = () => (
-    <div className="text-center py-8">
-      <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <CheckCircle className="w-10 h-10 text-green-600" />
+    <div className="text-center py-6">
+      <div className="w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-200/50">
+        <CheckCircle className="w-12 h-12 text-green-600" />
       </div>
       <h2 className="text-2xl font-bold text-slate-900 mb-2">You&apos;re All Set!</h2>
       <p className="text-slate-600 mb-6">
         Your account has been created and KYC information saved.<br />
         Start accepting payments today!
       </p>
-      <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left max-w-sm mx-auto">
-        <h3 className="font-medium mb-2">What&apos;s Next?</h3>
+      <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4 mb-6 text-left max-w-sm mx-auto border border-slate-100">
+        <h3 className="font-semibold mb-3 text-slate-900">What&apos;s Next?</h3>
         <ul className="text-sm text-slate-600 space-y-2">
           <li className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600" /> Create your first payment link
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" /> Create your first payment link
           </li>
           <li className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600" /> Share with clients worldwide
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" /> Share with clients worldwide
           </li>
           <li className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600" /> Receive payments in bKash
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" /> Receive payments in bKash
           </li>
         </ul>
       </div>
-      <Button onClick={() => router.push('/dashboard')} className="gap-2">
+      <Button onClick={() => router.push('/dashboard')} className="gap-2 h-11 px-6 text-base font-medium">
         Go to Dashboard
         <ArrowRight className="w-4 h-4" />
       </Button>
@@ -615,99 +629,126 @@ export default function RegisterPage() {
   // Don't show step indicator on complete page
   if (currentStep === 'complete') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            {renderCompleteStep()}
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-green-50/30 to-slate-50 p-4">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <span className="text-white font-bold text-lg">LP</span>
+            </div>
+            <span className="font-bold text-2xl text-slate-900">LinkPay BD</span>
+          </div>
+          <Card className="border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+            <CardContent className="pt-6">
+              {renderCompleteStep()}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">LP</span>
-            </div>
-            <span className="font-bold text-xl">LinkPay BD</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-4">
+      <div className="w-full max-w-lg">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+            <span className="text-white font-bold text-lg">LP</span>
           </div>
-          <CardTitle className="text-2xl">
-            {currentStep === 'account' ? 'Create Account' :
-             currentStep === 'personal' ? 'Personal Information' :
-             currentStep === 'business' ? 'Business Details' :
-             currentStep === 'payout' ? 'Payout Setup' :
-             currentStep === 'verification' ? 'Email Verification' :
-             'Upload Documents'}
-          </CardTitle>
-          <CardDescription>
-            {currentStep === 'account' ? 'Step 1 of 5 - Set up your account' :
-             currentStep === 'personal' ? 'Step 2 of 5 - Tell us about yourself' :
-             currentStep === 'business' ? 'Step 3 of 5 - Optional business info' :
-             currentStep === 'payout' ? 'Step 4 of 5 - Where to send your money' :
-             currentStep === 'verification' ? 'Step 5 of 5 - Verify your email' :
-             'Final step - Verify your identity'}
-          </CardDescription>
-        </CardHeader>
+          <span className="font-bold text-2xl text-slate-900">LinkPay BD</span>
+        </div>
 
-        {renderStepIndicator()}
+        <Card className="border-0 shadow-xl shadow-slate-200/50 overflow-hidden">
+          {/* Card Header */}
+          <CardHeader className="space-y-1 pb-4 text-center">
+            <CardTitle className="text-2xl font-bold text-slate-900">
+              {currentStep === 'account' ? 'Create Account' :
+               currentStep === 'personal' ? 'Personal Information' :
+               currentStep === 'business' ? 'Business Details' :
+               currentStep === 'payout' ? 'Payout Setup' :
+               currentStep === 'verification' ? 'Email Verification' :
+               'Upload Documents'}
+            </CardTitle>
+            <CardDescription className="text-slate-500">
+              {currentStep === 'account' ? 'Step 1 of 5 - Set up your account' :
+               currentStep === 'personal' ? 'Step 2 of 5 - Tell us about yourself' :
+               currentStep === 'business' ? 'Step 3 of 5 - Optional business info' :
+               currentStep === 'payout' ? 'Step 4 of 5 - Where to send your money' :
+               currentStep === 'verification' ? 'Step 5 of 5 - Verify your email' :
+               'Final step - Verify your identity'}
+            </CardDescription>
+          </CardHeader>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleNext() }}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
-                {error}
-              </div>
+          {/* Step Indicator */}
+          <div className="px-6 pb-2">
+            {renderStepIndicator()}
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleNext() }}>
+            <CardContent className="space-y-4 pt-0">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {renderStep()}
+            </CardContent>
+
+            {['account', 'personal', 'business', 'payout', 'documents'].includes(currentStep) && (
+              <CardFooter className="flex justify-between pt-0">
+                {stepIndex > 0 ? (
+                  <Button type="button" variant="outline" onClick={handleBack} className="gap-2">
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                  </Button>
+                ) : (
+                  <div />
+                )}
+
+                {currentStep === 'documents' ? (
+                  <Button type="button" onClick={handleComplete} disabled={loading} className="gap-2">
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Complete Setup
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                ) : currentStep === 'verification' ? null : (
+                  <Button type="submit" disabled={loading} className="gap-2">
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardFooter>
             )}
-            {renderStep()}
-          </CardContent>
+          </form>
+        </Card>
 
-          {['account', 'personal', 'business', 'payout', 'documents'].includes(currentStep) && (
-            <CardFooter className="flex justify-between">
-              {stepIndex > 0 ? (
-                <Button type="button" variant="outline" onClick={handleBack}>
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-              ) : (
-                <div />
-              )}
-
-              {currentStep === 'documents' ? (
-                <Button type="button" onClick={handleComplete} disabled={loading}>
-                  {loading ? 'Processing...' : 'Complete Setup'}
-                </Button>
-              ) : currentStep === 'verification' ? null : (
-                <Button type="submit" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      Continue
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </CardFooter>
-          )}
-        </form>
-
-        <div className="px-6 pb-4 text-center">
+        {/* Already have account */}
+        <div className="text-center mt-6">
           <p className="text-sm text-slate-500">
             Already have an account?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
               Sign in
             </Link>
           </p>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

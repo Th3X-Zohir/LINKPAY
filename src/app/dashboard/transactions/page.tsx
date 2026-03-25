@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CreditCard, CheckCircle, XCircle, Clock, ArrowUpRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -64,18 +66,18 @@ export default function TransactionsPage() {
     .filter(t => t.status === 'SUCCESS')
     .reduce((sum, t) => sum + t.platformFee + t.gatewayFee, 0)
 
-  function getStatusIcon(status: string) {
+  function getStatusBadge(status: string) {
     switch (status) {
       case 'SUCCESS':
-        return <CheckCircle className="w-4 h-4 text-green-600" />
+        return <Badge variant="success" className="gap-1"><CheckCircle className="w-3 h-3" /> Success</Badge>
       case 'FAILED':
-        return <XCircle className="w-4 h-4 text-red-600" />
+        return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Failed</Badge>
       case 'PENDING':
-        return <Clock className="w-4 h-4 text-yellow-600" />
+        return <Badge variant="warning" className="gap-1"><Clock className="w-3 h-3" /> Pending</Badge>
       case 'REFUNDED':
-        return <ArrowUpRight className="w-4 h-4 text-blue-600" />
+        return <Badge variant="info" className="gap-1"><ArrowUpRight className="w-3 h-3" /> Refunded</Badge>
       default:
-        return <Clock className="w-4 h-4 text-slate-400" />
+        return <Badge variant="muted" className="gap-1"><Clock className="w-3 h-3" /> {status}</Badge>
     }
   }
 
@@ -130,9 +132,9 @@ export default function TransactionsPage() {
         </div>
         <Card>
           <CardContent className="p-8 text-center">
-            <div role="alert" className="p-3 text-sm text-red-600 bg-red-50 rounded-md mb-4">
-              {error}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
             <Button onClick={fetchTransactions} variant="outline">
               Try Again
             </Button>
@@ -193,45 +195,42 @@ export default function TransactionsPage() {
             <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
               <table className="min-w-[600px] w-full md:min-w-0">
                 <thead>
-                  <tr className="text-left text-sm text-slate-500 border-b">
-                    <th className="pb-3 font-medium pr-4">Description</th>
-                    <th className="pb-3 font-medium pr-4">Date</th>
-                    <th className="pb-3 font-medium pr-4">Amount</th>
-                    <th className="pb-3 font-medium pr-4">Fees</th>
-                    <th className="pb-3 font-medium pr-4">Net</th>
-                    <th className="pb-3 font-medium">Status</th>
+                  <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/50">
+                    <th className="px-4 py-3 rounded-tl-lg">Description</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Amount</th>
+                    <th className="px-4 py-3">Fees</th>
+                    <th className="px-4 py-3">Net</th>
+                    <th className="px-4 py-3 rounded-tr-lg">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-slate-100">
                   {transactions.map((tx) => (
                     <tr
                       key={tx.id}
-                      className="text-sm hover:bg-slate-50 cursor-pointer transition-colors"
+                      className="text-sm hover:bg-slate-50/80 cursor-pointer transition-colors"
                       onClick={() => router.push(`/dashboard/transactions/${tx.id}`)}
                     >
-                      <td className="py-4">
-                        <div className="font-medium">{tx.paymentLink.description}</div>
-                        <div className="text-slate-500 text-xs">
-                          ID: {tx.aamarPayTxnId || tx.id.substring(0, 8)}...
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-slate-900">{tx.paymentLink.description}</div>
+                        <div className="text-slate-500 text-xs font-mono mt-0.5">
+                          {tx.aamarPayTxnId || tx.id.substring(0, 8)}...
                         </div>
                       </td>
-                      <td className="py-4 text-slate-600">
+                      <td className="px-4 py-4 text-slate-600">
                         {formatDate(tx.createdAt)}
                       </td>
-                      <td className="py-4 font-medium">
+                      <td className="px-4 py-4 font-medium text-slate-900">
                         {formatCurrency(tx.amount)}
                       </td>
-                      <td className="py-4 text-slate-600">
+                      <td className="px-4 py-4 text-slate-600">
                         {formatCurrency(tx.platformFee + tx.gatewayFee)}
                       </td>
-                      <td className="py-4 font-medium text-green-600">
+                      <td className="px-4 py-4 font-semibold text-green-600">
                         {formatCurrency(tx.netAmount)}
                       </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(tx.status)}
-                          <span className="capitalize">{tx.status.toLowerCase()}</span>
-                        </div>
+                      <td className="px-4 py-4">
+                        {getStatusBadge(tx.status)}
                       </td>
                     </tr>
                   ))}

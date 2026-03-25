@@ -25,14 +25,14 @@ function SidebarLink({ href, icon: Icon, label }: { href: string; icon: React.El
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+      className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ${
         isActive
-          ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 font-medium'
-          : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'
+          ? 'bg-blue-600 text-white font-medium shadow-sm'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
       }`}
       aria-current={isActive ? 'page' : undefined}
     >
-      <Icon className="w-4 h-4" />
+      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
       {label}
     </Link>
   )
@@ -56,37 +56,57 @@ export function SidebarNav() {
 
   return (
     <aside className="w-64 bg-white border-r min-h-screen sticky top-0 hidden md:block">
-      <nav className="p-4 space-y-1">
-        <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
-        <SidebarLink href="/dashboard/links" icon={LinkIcon} label="Payment Links" />
-        <SidebarLink href="/dashboard/transactions" icon={CreditCard} label="Transactions" />
-        <SidebarLink href="/dashboard/payouts" icon={Wallet} label="Payouts" />
-        <SidebarLink href="/dashboard/documents" icon={FileText} label="Documents" />
-        <SidebarLink href="/dashboard/disputes" icon={MessageSquare} label="Disputes" />
-        <SidebarLink href="/dashboard/analytics" icon={BarChart3} label="Analytics" />
-        <SidebarLink href="/dashboard/settings" icon={Settings} label="Settings" />
-      </nav>
-
-      {/* Admin Section */}
-      {adminChecked && isAdmin && (
-        <div className="p-4 border-t mt-4">
-          <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">Admin</p>
-          <SidebarLink href="/admin" icon={Shield} label="Admin Panel" />
+      <div className="p-4">
+        {/* Main Navigation */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-3">Main Menu</p>
+          <nav className="space-y-1">
+            <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+            <SidebarLink href="/dashboard/links" icon={LinkIcon} label="Payment Links" />
+            <SidebarLink href="/dashboard/transactions" icon={CreditCard} label="Transactions" />
+            <SidebarLink href="/dashboard/payouts" icon={Wallet} label="Payouts" />
+          </nav>
         </div>
-      )}
 
-      {/* Client Portal Section */}
-      <div className="p-4 border-t mt-4">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Portal</p>
-        <a
-          href="/client/demo"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          Client Portal
-        </a>
+        {/* Tools Navigation */}
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-3">Tools</p>
+          <nav className="space-y-1">
+            <SidebarLink href="/dashboard/documents" icon={FileText} label="Documents" />
+            <SidebarLink href="/dashboard/disputes" icon={MessageSquare} label="Disputes" />
+            <SidebarLink href="/dashboard/analytics" icon={BarChart3} label="Analytics" />
+          </nav>
+        </div>
+
+        {/* Settings */}
+        <div className="mb-6">
+          <nav className="space-y-1">
+            <SidebarLink href="/dashboard/settings" icon={Settings} label="Settings" />
+          </nav>
+        </div>
+
+        {/* Admin Section */}
+        {adminChecked && isAdmin && (
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-3 px-3">Admin</p>
+            <nav className="space-y-1">
+              <SidebarLink href="/admin" icon={Shield} label="Admin Panel" />
+            </nav>
+          </div>
+        )}
+
+        {/* Client Portal Section */}
+        <div className="pt-4 border-t border-slate-100">
+          <a
+            href="/client/demo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg transition-all duration-200"
+          >
+            <ExternalLink className="w-4 h-4 text-slate-400" />
+            Client Portal
+          </a>
+        </div>
       </div>
     </aside>
   )

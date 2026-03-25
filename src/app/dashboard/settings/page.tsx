@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from 'next-auth/react'
 import { User, Wallet, Building, Save, CheckCircle, Loader2, FileText, ArrowRight } from 'lucide-react'
@@ -161,16 +162,15 @@ export default function SettingsPage() {
       </div>
 
       {success && (
-        <div className="p-4 bg-green-50 text-green-700 rounded-lg flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
-          Profile updated successfully!
-        </div>
+        <Alert variant="success">
+          <AlertDescription>Profile updated successfully!</AlertDescription>
+        </Alert>
       )}
 
       {error && (
-        <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-lg">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {!profileLoaded ? (
