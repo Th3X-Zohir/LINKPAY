@@ -3,11 +3,21 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Wallet, ArrowUpRight, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react'
+import { Wallet, CheckCircle, Clock, XCircle, Loader2, Banknote, Smartphone } from 'lucide-react'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface Payout {
   id: string
@@ -29,15 +39,28 @@ interface BalanceData {
   pendingTransactionCount: number
 }
 
+interface UserSettings {
+  bkashNumber: string | null
+  bankAccount: string | null
+  bankName: string | null
+}
+
 export default function PayoutsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([])
   const [balance, setBalance] = useState<BalanceData | null>(null)
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [requesting, setRequesting] = useState(false)
+
+  // Withdraw dialog state
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [withdrawMethod, setWithdrawMethod] = useState<'BKASH' | 'BANK'>('BKASH')
 
   useEffect(() => {
     fetchPayouts()
     fetchBalance()
+    fetchUserSettings()
   }, [])
 
   async function fetchPayouts() {
@@ -66,8 +89,46 @@ export default function PayoutsPage() {
     }
   }
 
+  async function fetchUserSettings() {
+    try {
+      const res = await fetch('/api/users/me')
+      const data = await res.json()
+      if (data.success) {
+        setUserSettings({
+          bkashNumber: data.data?.user?.bkashNumber || null,
+          bankAccount: data.data?.user?.bankAccount || null,
+          bankName: data.data?.user?.bankName || null
+        })
+      }
+    } catch (err) {
+      console.error('Failed to fetch user settings:', err)
+    }
+  }
+
+  function openWithdrawDialog() {
+    if (!balance) return
+    // Default to full available balance
+    setWithdrawAmount((balance.available / 100).toString())
+    // Default to bKash if available, otherwise bank
+    setWithdrawMethod(userSettings?.bkashNumber ? 'BKASH' : 'BANK')
+    setWithdrawDialogOpen(true)
+  }
+
   async function requestPayout() {
-    if (!balance || balance.available < 500) return
+    if (!balance || !withdrawAmount) return
+
+    const amountInTaka = Math.round(parseFloat(withdrawAmount) * 100)
+    const minAmount = 500 // Minimum 5 Taka
+
+    if (isNaN(amountInTaka) || amountInTaka < minAmount) {
+      toast.error(`Minimum withdrawal amount is ${formatCurrency(minAmount)}`)
+      return
+    }
+
+    if (amountInTaka > balance.available) {
+      toast.error('Withdrawal amount exceeds available balance')
+      return
+    }
 
     setRequesting(true)
     try {
@@ -75,14 +136,16 @@ export default function PayoutsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: balance.available,
-          method: 'BKASH'
+          amount: amountInTaka,
+          method: withdrawMethod
         })
       })
 
       const data = await res.json()
       if (data.success) {
-        toast.success('Payout requested successfully!')
+        toast.success(data.data?.message || 'Payout requested successfully!')
+        setWithdrawDialogOpen(false)
+        setWithdrawAmount('')
         fetchPayouts()
         fetchBalance()
       } else {
@@ -109,6 +172,13 @@ export default function PayoutsPage() {
     }
   }
 
+  const availableBalance = balance?.available || 0
+  const totalPaidOut = balance?.totalPaidOut || 0
+  const pendingAmount = balance?.pendingPayout || 0
+
+  const hasBkash = !!userSettings?.bkashNumber
+  const hasBank = !!userSettings?.bankAccount && !!userSettings?.bankName
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -116,10 +186,6 @@ export default function PayoutsPage() {
       </div>
     )
   }
-
-  const availableBalance = balance?.available || 0
-  const totalPaidOut = balance?.totalPaidOut || 0
-  const pendingAmount = balance?.pendingPayout || 0
 
   return (
     <div className="space-y-6">
@@ -160,10 +226,11 @@ export default function PayoutsPage() {
         </Card>
       </div>
 
-      {availableBalance >= 500 && (
+      {/* Withdrawal Options */}
+      {availableBalance >= 500 ? (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-col sm:flex-row gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                   <Wallet className="w-6 h-6 text-green-600" />
@@ -171,22 +238,39 @@ export default function PayoutsPage() {
                 <div>
                   <h3 className="font-semibold text-green-900">Ready to withdraw?</h3>
                   <p className="text-sm text-green-700">
-                    You have {formatCurrency(availableBalance)} available for withdrawal to bKash
+                    You have {formatCurrency(availableBalance)} available
                   </p>
                 </div>
               </div>
               <Button
-                onClick={requestPayout}
-                disabled={requesting}
+                onClick={openWithdrawDialog}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {requesting ? 'Processing...' : 'Withdraw'} <ArrowUpRight className="w-4 h-4 ml-2" />
+                <Wallet className="w-4 h-4 mr-2" />
+                Withdraw Funds
               </Button>
             </div>
           </CardContent>
         </Card>
-      )}
+      ) : availableBalance > 0 ? (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-yellow-900">Minimum withdrawal not reached</h3>
+                <p className="text-sm text-yellow-700">
+                  You need at least {formatCurrency(500)} to withdraw. Current balance: {formatCurrency(availableBalance)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
+      {/* Payout History */}
       <Card>
         <CardHeader>
           <CardTitle>Payout History</CardTitle>
@@ -210,7 +294,11 @@ export default function PayoutsPage() {
                       <span className="font-medium">{getStatusBadge(payout.status)}</span>
                     </div>
                     <div className="text-sm text-slate-500 mt-1">
-                      {payout.method === 'BKASH' ? 'bKash' : 'Bank Transfer'}
+                      {payout.method === 'BKASH' ? (
+                        <span className="flex items-center gap-1"><Smartphone className="w-3 h-3" /> bKash</span>
+                      ) : (
+                        <span className="flex items-center gap-1"><Banknote className="w-3 h-3" /> Bank Transfer</span>
+                      )}
                       {payout.bkashTxnId && ` • ${payout.bkashTxnId.substring(0, 12)}...`}
                     </div>
                     <div className="text-xs text-slate-400 mt-1">
@@ -232,6 +320,141 @@ export default function PayoutsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Withdraw Dialog */}
+      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Withdraw Funds</DialogTitle>
+            <DialogDescription>
+              Enter the amount you wish to withdraw. Minimum withdrawal is {formatCurrency(500)}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Amount Input */}
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (BDT)</Label>
+              <Input
+                id="amount"
+                type="number"
+                min="5"
+                max={(availableBalance / 100).toString()}
+                step="1"
+                placeholder="Enter amount"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+              />
+              <p className="text-xs text-slate-500">
+                Available: {formatCurrency(availableBalance)}
+              </p>
+            </div>
+
+            {/* Quick Amount Buttons */}
+            <div className="flex gap-2 flex-wrap">
+              {[1000, 2500, 5000, 10000].map((amount) => {
+                const amountInTaka = amount * 100
+                if (amountInTaka > availableBalance) return null
+                return (
+                  <Button
+                    key={amount}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWithdrawAmount(amount.toString())}
+                  >
+                    {formatCurrency(amountInTaka)}
+                  </Button>
+                )
+              })}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setWithdrawAmount((availableBalance / 100).toString())}
+              >
+                All
+              </Button>
+            </div>
+
+            {/* Method Selection */}
+            <div className="space-y-2">
+              <Label>Withdrawal Method</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setWithdrawMethod('BKASH')}
+                  disabled={!hasBkash}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    withdrawMethod === 'BKASH'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  } ${!hasBkash ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Smartphone className="w-5 h-5 text-pink-600" />
+                    <span className="font-medium">bKash</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {hasBkash ? `Send to ${userSettings?.bkashNumber}` : 'Not configured'}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">Instant transfer</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setWithdrawMethod('BANK')}
+                  disabled={!hasBank}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    withdrawMethod === 'BANK'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                  } ${!hasBank ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Banknote className="w-5 h-5 text-blue-600" />
+                    <span className="font-medium">Bank</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {hasBank ? userSettings?.bankName : 'Not configured'}
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">1-3 business days</p>
+                </button>
+              </div>
+
+              {!hasBkash && !hasBank && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">
+                    Please configure your bKash or Bank details in Settings before withdrawing.
+                  </p>
+                  <Link href="/dashboard/settings" className="text-sm text-blue-600 hover:underline mt-1 block">
+                    Go to Settings
+                  </Link>
+                </div>
+              )}
+
+              {withdrawMethod === 'BANK' && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-700">
+                    Bank transfers require manual verification and may take 1-3 business days to process.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={requestPayout}
+              disabled={requesting || (!hasBkash && !hasBank) || !withdrawAmount}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {requesting ? 'Processing...' : 'Request Withdrawal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

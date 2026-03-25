@@ -80,7 +80,7 @@ export function MobileNav() {
   return (
     <>
       {/* Desktop Sidebar - shows ALL navigation items */}
-      <aside className="hidden md:block w-64 bg-white border-r min-h-screen sticky top-0 overflow-y-auto flex flex-col">
+      <aside className="hidden md:block w-64 bg-white border-r min-h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto flex flex-col">
         <div className="p-4 flex-1">
           {/* Main Navigation */}
           <div className="mb-6">
