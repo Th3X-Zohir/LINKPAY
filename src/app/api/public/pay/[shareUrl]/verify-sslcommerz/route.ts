@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createAuditLog } from '@/lib/audit'
-import { verifySSLCommerzPayment } from '@/lib/api/sslcommerz'
 
 interface RouteParams {
   params: Promise<{ shareUrl: string }>
