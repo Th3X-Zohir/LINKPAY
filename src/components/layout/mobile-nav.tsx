@@ -2,88 +2,173 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Link2, CreditCard, ArrowUpRight, Settings, FileText, AlertCircle, BarChart3, MoreHorizontal } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Link as LinkIcon,
+  CreditCard,
+  ArrowUpRight,
+  Settings,
+  FileText,
+  MessageSquare,
+  BarChart3,
+  Shield,
+  ExternalLink,
+  Home,
+  MoreHorizontal,
+  AlertCircle,
+} from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useEffect, useState } from 'react'
 
-const navItems = [
+const mainNavItems = [
   { href: '/dashboard', label: 'Home', icon: Home },
-  { href: '/dashboard/links', label: 'Links', icon: Link2 },
+  { href: '/dashboard/links', label: 'Links', icon: LinkIcon },
+  { href: '/dashboard/transactions', label: 'Transactions', icon: CreditCard },
+  { href: '/dashboard/payouts', label: 'Payouts', icon: ArrowUpRight },
+]
+
+const toolsNavItems = [
+  { href: '/dashboard/documents', label: 'Documents', icon: FileText },
+  { href: '/dashboard/disputes', label: 'Disputes', icon: MessageSquare },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+]
+
+const bottomNavItems = [
+  { href: '/dashboard', label: 'Home', icon: Home },
+  { href: '/dashboard/links', label: 'Links', icon: LinkIcon },
   { href: '/dashboard/transactions', label: 'Transactions', icon: CreditCard },
   { href: '/dashboard/payouts', label: 'Payouts', icon: ArrowUpRight },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ]
 
-const moreNavItems = [
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-  { href: '/dashboard/documents', label: 'Documents', icon: FileText },
-  { href: '/dashboard/disputes', label: 'Disputes', icon: AlertCircle },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-]
+function SidebarLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
+  const pathname = usePathname()
+  const isActive = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ${
+        isActive
+          ? 'bg-blue-600 text-white font-medium shadow-sm'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+      }`}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+      {label}
+    </Link>
+  )
+}
 
 export function MobileNav() {
   const pathname = usePathname()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminChecked, setAdminChecked] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/check')
+      .then(res => res.json())
+      .then(data => {
+        setIsAdmin(data.isAdmin)
+        setAdminChecked(true)
+      })
+      .catch(() => {
+        setAdminChecked(true)
+      })
+  }, [])
 
   return (
     <>
-      {/* Desktop Sidebar - hidden on mobile */}
-      <aside className="hidden md:flex w-64 flex-col bg-white border-r border-slate-200/60 min-h-[calc(100vh-4rem)] sticky top-16">
-        <nav className="flex-1 py-4 px-3">
-          <div className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 -ml-px'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </div>
-
-          {/* More Items Dropdown */}
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">More</p>
-            <div className="space-y-1">
-              {moreNavItems.map((item) => {
+      {/* Desktop Sidebar - shows ALL navigation items */}
+      <aside className="hidden md:block w-64 bg-white border-r min-h-screen sticky top-0">
+        <div className="p-4">
+          {/* Main Navigation */}
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-3">Main Menu</p>
+            <nav className="space-y-1">
+              {mainNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 -ml-px'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        ? 'bg-blue-600 text-white font-medium shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
-                    aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                     {item.label}
                   </Link>
                 )
               })}
-            </div>
+            </nav>
           </div>
-        </nav>
+
+          {/* Tools Navigation */}
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-3">Tools</p>
+            <nav className="space-y-1">
+              {toolsNavItems.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? 'bg-blue-600 text-white font-medium shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+
+          {/* Settings */}
+          <div className="mb-6">
+            <nav className="space-y-1">
+              <SidebarLink href="/dashboard/settings" icon={Settings} label="Settings" />
+            </nav>
+          </div>
+
+          {/* Admin Section */}
+          {adminChecked && isAdmin && (
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-3 px-3">Admin</p>
+              <nav className="space-y-1">
+                <SidebarLink href="/admin" icon={Shield} label="Admin Panel" />
+              </nav>
+            </div>
+          )}
+
+          {/* Client Portal Section */}
+          <div className="pt-4 border-t border-slate-100">
+            <a
+              href="/client"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200"
+            >
+              <ExternalLink className="w-4 h-4 text-slate-400" />
+              Client Portal
+            </a>
+          </div>
+        </div>
       </aside>
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-200/60 z-50 pb-safe">
         <div className="flex justify-around items-center h-16">
-          {navItems.slice(0, 4).map((item) => {
+          {bottomNavItems.slice(0, 4).map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
 
