@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from 'next-auth/react'
-import { User, Wallet, Building, Save, Loader2, FileText, ArrowRight, CheckCircle } from 'lucide-react'
+import { User, Wallet, Building, Save, Loader2, FileText, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
