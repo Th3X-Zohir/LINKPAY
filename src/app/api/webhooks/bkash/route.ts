@@ -11,21 +11,27 @@ interface WebhookPayload {
 }
 
 // Whitelist bKash IP ranges (production IPs should be configured via env)
-const BKASH_TRUSTED_IPS = process.env.BKASH_TRUSTED_IPS?.split(',') || [
-  '172.16.10.0/24', // bKash sandbox/production IPs - should be updated for production
-]
+const BKASH_TRUSTED_IPS = process.env.BKASH_TRUSTED_IPS?.split(',').map(ip => ip.trim()) || []
+// Allow webhook bypass for testing (default: false - secure)
+const BKASH_DEV_BYPASS = process.env.BKASH_WEBHOOK_DEV_BYPASS === 'true'
 
 function isTrustedIp(ip: string): boolean {
-  // In production, verify against actual bKash IPs
-  // For now, allow if BKASH_TRUSTED_IPS is not set (development mode)
-  if (process.env.NODE_ENV === 'production' && BKASH_TRUSTED_IPS.length > 0) {
-    return BKASH_TRUSTED_IPS.some(trusted =>
-      ip === trusted || ip.startsWith(trusted.replace('/24', ''))
-    )
+  // If no IPs are configured, reject all requests (fail secure)
+  if (!BKASH_TRUSTED_IPS.length && !BKASH_DEV_BYPASS) {
+    console.error('bKash webhook rejected - no trusted IPs configured and dev bypass disabled')
+    return false
   }
-  // In development, allow all but log warning
-  console.warn('bKash webhook called from IP:', ip, '- Consider configuring BKASH_TRUSTED_IPS in production')
-  return true
+  
+  // If dev bypass is enabled, allow all but log warning
+  if (BKASH_DEV_BYPASS) {
+    console.warn('bKash webhook called from IP:', ip, '- DEV BYPASS ENABLED - Allowing all requests')
+    return true
+  }
+  
+  // Verify against configured IPs
+  return BKASH_TRUSTED_IPS.some(trusted =>
+    ip === trusted || (trusted.includes('/24') && ip.startsWith(trusted.split('/')[0]))
+  )
 }
 
 export async function POST(request: NextRequest) {
@@ -48,20 +54,39 @@ export async function POST(request: NextRequest) {
     // Log the webhook event with IP
     console.log('bKash webhook received:', JSON.stringify(payload), 'from IP:', clientIp)
 
+    // Check for duplicate webhook delivery using trx_id as eventId
+    const eventId = `bkash-${payload.trx_id}`
+    const existingEvent = await db.webhookEvent.findUnique({
+      where: { eventId }
+    })
+
+    if (existingEvent?.processed) {
+      return NextResponse.json({ message: 'Event already processed' })
+    }
+
+    // Create or update webhook event record (upsert pattern for race condition safety)
+    await db.webhookEvent.upsert({
+      where: { eventId },
+      create: {
+        eventId,
+        eventType: 'BKASH_PAYOUT_UPDATE',
+        payload: JSON.parse(JSON.stringify(payload)),
+        processed: false,
+        processedAt: null
+      },
+      update: {
+        payload: JSON.parse(JSON.stringify(payload)),
+        processed: false,
+        processedAt: null
+      }
+    })
+
     // CRITICAL: Verify the transaction actually exists in bKash before processing
     // This prevents fake webhook calls from marking fake payouts as completed
     const bkashStatus = await checkBkashPayoutStatus(payload.trx_id)
     if (bkashStatus === 'UNKNOWN' || bkashStatus === 'FAILED') {
       console.warn('bKash webhook - transaction not found in bKash system:', payload.trx_id)
-      // Still store for manual investigation but don't mark as completed
-      await db.webhookEvent.create({
-        data: {
-          eventId: `bkash-verify-fail-${payload.trx_id}-${Date.now()}`,
-          eventType: 'BKASH_PAYOUT_UPDATE',
-          payload: JSON.parse(JSON.stringify(payload)),
-          processed: false
-        }
-      })
+      // Don't mark as processed - allows retry after investigation
       return NextResponse.json(
         { error: 'Transaction not verified with bKash' },
         { status: 400 }
@@ -81,24 +106,26 @@ export async function POST(request: NextRequest) {
         })
         if (payoutById) {
           await processPayoutUpdate(payoutById.id, payload)
+          // Mark webhook as processed after successful completion
+          await db.webhookEvent.update({
+            where: { eventId },
+            data: { processed: true, processedAt: new Date() }
+          }).catch(() => { /* ignore */ })
           return NextResponse.json({ received: true })
         }
       }
 
-      // Store for later processing if not found
-      await db.webhookEvent.create({
-        data: {
-          eventId: `bkash-${payload.trx_id}-${Date.now()}`,
-          eventType: 'BKASH_PAYOUT_UPDATE',
-          payload: JSON.parse(JSON.stringify(payload)),
-          processed: false
-        }
-      })
-
+      // Don't mark as processed - payout not found needs investigation
       return NextResponse.json({ received: true, message: 'Payout not found, stored for processing' })
     }
 
     await processPayoutUpdate(payout.id, payload)
+
+    // Mark webhook as processed after successful completion
+    await db.webhookEvent.update({
+      where: { eventId },
+      data: { processed: true, processedAt: new Date() }
+    }).catch(() => { /* ignore */ })
 
     return NextResponse.json({ received: true })
   } catch (error) {

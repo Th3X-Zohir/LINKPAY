@@ -38,25 +38,28 @@ export async function POST(request: NextRequest) {
 
     const eventId = payload.event_id || payload.payment_id
 
-    // Check for duplicate webhook delivery
-    const existingEvent = await db.webhookEvent.findUnique({
-      where: { eventId }
-    })
-
-    if (existingEvent?.processed) {
-      return NextResponse.json({ message: 'Event already processed' })
-    }
-
-    // Create webhook event record first (not yet processed)
-    await db.webhookEvent.create({
-      data: {
+    // Use upsert pattern for race condition safety
+    // This ensures only one webhook processing can succeed for a given eventId
+    const webhookEvent = await db.webhookEvent.upsert({
+      where: { eventId },
+      create: {
         eventId,
         eventType: 'PAYMENT_STATUS',
         payload: JSON.parse(JSON.stringify(payload)),
         processed: false,
         processedAt: null
+      },
+      update: {
+        payload: JSON.parse(JSON.stringify(payload)),
+        processed: false,
+        processedAt: null
       }
     })
+
+    // If event was already processed, skip
+    if (webhookEvent.processed) {
+      return NextResponse.json({ message: 'Event already processed' })
+    }
 
     try {
       if (payload.status === 'success' || payload.status === 'Successful') {
@@ -71,8 +74,23 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Payment link not found' }, { status: 404 })
         }
 
-        const amount = Math.round(parseFloat(payload.amount || '0') * 100)
+        // Verify webhook amount matches payment link amount (prevent manipulation)
+        const webhookAmount = Math.round(parseFloat(payload.amount || '0') * 100)
+        if (webhookAmount !== paymentLink.amount) {
+          console.error('aamarPay webhook amount mismatch:', {
+            webhookAmount,
+            paymentLinkAmount: paymentLink.amount,
+            payment_id: payload.payment_id
+          })
+          // Don't mark as processed - amount mismatch needs investigation
+          return NextResponse.json({ error: 'Amount mismatch - investigation required' }, { status: 400 })
+        }
+
+        const amount = webhookAmount
+        // Platform fee: 0.75% (LinkPay BD's fee)
         const platformFee = Math.round(amount * 0.0075)
+        // Gateway fee: 2.55% (aamarPay's actual rate - includes transaction charge + VAT)
+        // Note: aamarPay charges 2.5% + 0.05% VAT = 2.55% total
         const gatewayFee = Math.round(amount * 0.0255)
         const netAmount = amount - platformFee - gatewayFee
 

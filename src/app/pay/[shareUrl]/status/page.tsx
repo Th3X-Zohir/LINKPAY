@@ -121,7 +121,7 @@ function PaymentStatusContent() {
   }
   
   if (result === 'failed') {
-    return <PaymentFailed paymentLink={paymentLink} />
+    return <PaymentFailed paymentLink={paymentLink} shareUrl={shareUrl} />
   }
   
   if (result === 'cancelled') {
@@ -240,7 +240,7 @@ function PaymentSuccess({
   )
 }
 
-function PaymentFailed({ paymentLink }: { paymentLink: PaymentLinkDetails | null }) {
+function PaymentFailed({ paymentLink, shareUrl }: { paymentLink: PaymentLinkDetails | null; shareUrl: string }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -271,7 +271,7 @@ function PaymentFailed({ paymentLink }: { paymentLink: PaymentLinkDetails | null
           </div>
           
           <a
-            href={`/pay/${paymentLink?.id}`}
+            href={`/pay/${shareUrl}`}
             className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
             Try Again

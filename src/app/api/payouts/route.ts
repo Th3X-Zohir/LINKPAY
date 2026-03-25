@@ -129,17 +129,37 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      await db.transaction.updateMany({
+      // Only mark enough transactions to cover the payout amount (oldest first)
+      const pendingTransactions = await db.transaction.findMany({
         where: {
           userId: session.user.id,
           status: 'SUCCESS',
           payoutStatus: 'PENDING'
         },
-        data: {
-          payoutStatus: 'PROCESSING',
-          payoutId: payout.id
-        }
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, netAmount: true }
       })
+
+      let remainingAmount = amount
+      const transactionsToUpdate: string[] = []
+
+      for (const tx of pendingTransactions) {
+        if (remainingAmount <= 0) break
+        transactionsToUpdate.push(tx.id)
+        remainingAmount -= tx.netAmount
+      }
+
+      if (transactionsToUpdate.length > 0) {
+        await db.transaction.updateMany({
+          where: {
+            id: { in: transactionsToUpdate }
+          },
+          data: {
+            payoutStatus: 'PROCESSING',
+            payoutId: payout.id
+          }
+        })
+      }
 
       await createAuditLog({
         action: 'PAYOUT_INITIATED',
@@ -184,18 +204,37 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Update transaction payout status
-      await db.transaction.updateMany({
+      // Only mark enough transactions to cover the payout amount (oldest first)
+      const pendingTransactions = await db.transaction.findMany({
         where: {
           userId: session.user.id,
           status: 'SUCCESS',
           payoutStatus: 'PENDING'
         },
-        data: {
-          payoutStatus: 'PROCESSING',
-          payoutId: payout.id
-        }
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, netAmount: true }
       })
+
+      let remainingAmount = amount
+      const transactionsToUpdate: string[] = []
+
+      for (const tx of pendingTransactions) {
+        if (remainingAmount <= 0) break
+        transactionsToUpdate.push(tx.id)
+        remainingAmount -= tx.netAmount
+      }
+
+      if (transactionsToUpdate.length > 0) {
+        await db.transaction.updateMany({
+          where: {
+            id: { in: transactionsToUpdate }
+          },
+          data: {
+            payoutStatus: 'PROCESSING',
+            payoutId: payout.id
+          }
+        })
+      }
 
       await db.auditLog.create({
         data: {

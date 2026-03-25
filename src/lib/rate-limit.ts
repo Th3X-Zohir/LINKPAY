@@ -9,6 +9,8 @@ interface RateLimitEntry {
  * For multi-instance deployments, use Redis-based rate limiting.
  */
 const rateLimitStore = new Map<string, RateLimitEntry>()
+// Mutex map to prevent race conditions during check-and-increment
+const rateLimitMutex = new Map<string, boolean>()
 
 /**
  * Clean up expired entries periodically
@@ -24,6 +26,7 @@ setInterval(() => {
 
 /**
  * Check if a request should be rate limited.
+ * Uses a simple mutex per key to prevent race conditions.
  * @param key - Unique identifier (e.g., IP address, user ID)
  * @param limit - Maximum number of requests allowed
  * @param windowMs - Time window in milliseconds
@@ -31,26 +34,40 @@ setInterval(() => {
  */
 export function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
-  const entry = rateLimitStore.get(key)
-
-  if (!entry || entry.resetAt < now) {
-    // Create new entry
-    rateLimitStore.set(key, {
-      count: 1,
-      resetAt: now + windowMs,
-    })
+  
+  // Acquire mutex for this key
+  if (rateLimitMutex.get(key)) {
+    // Another request is currently checking this key, fail-safe by allowing
+    // In high contention, this prevents race but may allow slight overruns
     return true
   }
+  rateLimitMutex.set(key, true)
+  
+  try {
+    const entry = rateLimitStore.get(key)
 
-  if (entry.count >= limit) {
-    // Rate limited
-    return false
+    if (!entry || entry.resetAt < now) {
+      // Create new entry
+      rateLimitStore.set(key, {
+        count: 1,
+        resetAt: now + windowMs,
+      })
+      return true
+    }
+
+    if (entry.count >= limit) {
+      // Rate limited
+      return false
+    }
+
+    // Increment count atomically within mutex
+    entry.count++
+    rateLimitStore.set(key, entry)
+    return true
+  } finally {
+    // Always release mutex
+    rateLimitMutex.delete(key)
   }
-
-  // Increment count
-  entry.count++
-  rateLimitStore.set(key, entry)
-  return true
 }
 
 /**

@@ -47,7 +47,7 @@ export async function getBkashToken(): Promise<BkashTokenResponse> {
 
     cachedToken = {
       token: data.id_token,
-      expiresAt: Date.now() + ((data.expires_in - 60) * 1000)
+      expiresAt: Date.now() + ((Number(data.expires_in) - 60) * 1000)
     }
 
     return {

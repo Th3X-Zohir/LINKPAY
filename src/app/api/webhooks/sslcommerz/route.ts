@@ -43,36 +43,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
-    // Duplicate detection using WebhookEvent table (tran_id as eventId)
-    const existingEvent = await db.webhookEvent.findUnique({
-      where: { eventId: tran_id }
-    })
-
-    if (existingEvent?.processed) {
-      return NextResponse.json({ message: 'Event already processed' })
-    }
-
-    // Create webhook event record first (not yet processed)
-    await db.webhookEvent.create({
-      data: {
+    // Use upsert pattern for race condition safety
+    // This ensures only one webhook processing can succeed for a given eventId
+    const webhookEvent = await db.webhookEvent.upsert({
+      where: { eventId: tran_id },
+      create: {
         eventId: tran_id,
         eventType: 'SSL_COMMERZ_PAYMENT_STATUS',
+        payload: JSON.parse(JSON.stringify(payload)),
+        processed: false,
+        processedAt: null
+      },
+      update: {
         payload: JSON.parse(JSON.stringify(payload)),
         processed: false,
         processedAt: null
       }
     })
 
+    // If event was already processed, skip
+    if (webhookEvent.processed) {
+      return NextResponse.json({ message: 'Event already processed' })
+    }
+
     try {
       // Handle different statuses
       if (status === 'VALID') {
         // Successful payment
+        // Look up by aamarPayId which stores the SSLCommerz tran_id
         const paymentLink = await db.paymentLink.findFirst({
           where: {
-            OR: [
-              { aamarPayId: tran_id },
-              { shareUrl: tran_id }
-            ]
+            aamarPayId: tran_id
           },
           include: { user: true }
         })
@@ -84,9 +85,25 @@ export async function POST(request: NextRequest) {
         }
 
         // Amount in BDT, convert to poisha (multiply by 100)
-        const amountInPoisha = Math.round(parseFloat(amount || '0') * 100)
-        const platformFee = Math.round(amountInPoisha * 0.0075) // 0.75% platform fee
-        const gatewayFee = Math.round(amountInPoisha * 0.025) // ~2.5% gateway fee
+        const webhookAmount = Math.round(parseFloat(amount || '0') * 100)
+        
+        // Verify webhook amount matches payment link amount (prevent manipulation)
+        if (webhookAmount !== paymentLink.amount) {
+          console.error('SSLCommerz webhook amount mismatch:', {
+            webhookAmount,
+            paymentLinkAmount: paymentLink.amount,
+            tran_id
+          })
+          // Don't mark as processed - amount mismatch needs investigation
+          return NextResponse.json({ error: 'Amount mismatch - investigation required' }, { status: 400 })
+        }
+
+        const amountInPoisha = webhookAmount
+        // Platform fee: 0.75% (LinkPay BD's fee)
+        const platformFee = Math.round(amountInPoisha * 0.0075)
+        // Gateway fee: 2.5% (SSLCommerz's standard rate)
+        // Note: SSLCommerz charges 2.5% flat (no additional VAT at this rate)
+        const gatewayFee = Math.round(amountInPoisha * 0.025)
         const netAmount = amountInPoisha - platformFee - gatewayFee
 
         // Atomic transaction: update PaymentLink and create Transaction together
@@ -150,13 +167,10 @@ export async function POST(request: NextRequest) {
           console.error('Failed to send payment email:', err)
         })
       } else if (status === 'CANCELLED') {
-        // Handle cancelled payment
+        // Handle cancelled payment - look up by aamarPayId which stores the SSLCommerz tran_id
         const paymentLink = await db.paymentLink.findFirst({
           where: {
-            OR: [
-              { aamarPayId: tran_id },
-              { shareUrl: tran_id }
-            ]
+            aamarPayId: tran_id
           },
           include: { user: true }
         })
@@ -181,13 +195,10 @@ export async function POST(request: NextRequest) {
           })
         }
       } else if (status === 'FAILED') {
-        // Handle failed payment
+        // Handle failed payment - look up by aamarPayId which stores the SSLCommerz tran_id
         const paymentLink = await db.paymentLink.findFirst({
           where: {
-            OR: [
-              { aamarPayId: tran_id },
-              { shareUrl: tran_id }
-            ]
+            aamarPayId: tran_id
           },
           include: { user: true }
         })

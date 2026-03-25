@@ -3,6 +3,15 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
 
+// Transaction limits based on KYC level (stored in poisha)
+const TRANSACTION_LIMITS = {
+  UNVERIFIED: 100000, // ৳1,000
+  BASIC: 1000000,     // ৳10,000
+  FULL: 10000000      // ৳1,00,000
+} as const
+
+type KycLevel = 'UNVERIFIED' | 'BASIC' | 'FULL'
+
 const updatePaymentLinkSchema = z.object({
   description: z.string().min(1).max(500).optional(),
   amount: z.number().int().min(100).max(10000000).optional(),
@@ -120,6 +129,29 @@ export async function PUT(
         { success: false, error: { code: 'VALIDATION_ERROR', details: parsed.error.flatten() } },
         { status: 400 }
       )
+    }
+
+    // If amount is being changed, verify KYC level limits
+    if (parsed.data.amount !== undefined && parsed.data.amount !== existing.amount) {
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { kycLevel: true }
+      })
+      
+      if (user) {
+        const kycLevel = (user.kycLevel || 'UNVERIFIED') as KycLevel
+        const limit = TRANSACTION_LIMITS[kycLevel] || TRANSACTION_LIMITS.UNVERIFIED
+        
+        if (parsed.data.amount > limit) {
+          return NextResponse.json({
+            success: false,
+            error: {
+              code: 'LIMIT_EXCEEDED',
+              message: `Transaction amount exceeds your limit of ৳${(limit / 100).toLocaleString('en-BD')} for ${kycLevel === 'UNVERIFIED' ? 'unverified' : kycLevel === 'BASIC' ? 'basic' : 'full'} KYC level. Please upgrade your account or complete KYC verification.`
+            }
+          }, { status: 400 })
+        }
+      }
     }
 
     const paymentLink = await db.paymentLink.update({

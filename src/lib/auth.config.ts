@@ -3,6 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
 import { db } from './db'
 import bcrypt from 'bcryptjs'
+import { checkAccountLockout } from './account-lockout'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -53,6 +54,13 @@ export const authConfig: NextAuthConfig = {
         })
 
         if (!user) return null
+
+        // Check if account is locked BEFORE any authentication
+        const lockoutStatus = await checkAccountLockout(user.id)
+        if (lockoutStatus.isLocked) {
+          console.warn(`Login blocked for locked account: ${email}`)
+          return null
+        }
 
         // If passkey or OTP was verified, skip password check
         if (passkeyVerified || otpVerified) {
