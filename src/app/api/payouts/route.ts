@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
           method: 'BKASH',
           status: payoutStatus,
           bkashTxnId,
-          failureMsg: payoutStatus === 'FAILED' ? failureReason : null
+          failureMsg: failureReason
         }
       })
 

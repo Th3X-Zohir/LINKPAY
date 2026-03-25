@@ -25,9 +25,8 @@ import {
   XCircle,
   Plus,
   ShieldCheck,
-  CreditCard,
-  Phone,
-  Mail
+  Mail,
+  Phone
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -39,12 +38,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
 
 interface Passkey {
   id: string
@@ -351,7 +344,6 @@ export default function SettingsPage() {
         <p className="text-slate-600">Manage your account, payout methods, and security</p>
       </div>
 
-      {/* Success/Error Alerts */}
       {success && (
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="w-4 h-4 text-green-600" />
@@ -366,353 +358,291 @@ export default function SettingsPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile" className="gap-2">
-            <User className="w-4 h-4" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="payout" className="gap-2">
-            <Wallet className="w-4 h-4" />
-            Payout
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-            <ShieldCheck className="w-4 h-4" />
-            Security
-          </TabsTrigger>
-        </TabsList>
+      {/* Profile Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600" />
+            Profile Information
+          </CardTitle>
+          <CardDescription>Your basic account details</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!profileLoaded ? (
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : (
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-slate-400" />
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={session?.user?.email || ''}
+                  disabled
+                  className="bg-slate-50"
+                />
+                <p className="text-xs text-slate-500">Email cannot be changed</p>
+              </div>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-600" />
-                Profile Information
-              </CardTitle>
-              <CardDescription>Your basic account details</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!profileLoaded ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
                 </div>
-              ) : (
-                <form onSubmit={handleProfileSubmit} className="space-y-4">
-                  {/* Email - Read Only */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-slate-400" />
-                      Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={session?.user?.email || ''}
-                      disabled
-                      className="bg-slate-50"
-                    />
-                    <p className="text-xs text-slate-500">Email cannot be changed</p>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-slate-400" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="01XXXXXXXXX"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
 
-                  {/* Name */}
+              <div className="pt-4">
+                <Button type="submit" disabled={loading} className="gap-2">
+                  {loading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Save className="w-4 h-4" /> Save Profile</>
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Payout Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-green-600" />
+            Payout Information
+          </CardTitle>
+          <CardDescription>Where your earnings will be sent</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePayoutMethodsSubmit} className="space-y-6">
+            {/* bKash */}
+            <div className="flex items-start gap-4 p-4 bg-pink-50/50 rounded-lg">
+              <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" className="w-6 h-6 text-pink-600" fill="currentColor">
+                  <circle cx="12" cy="12" r="10" fill="#E2136E"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="bkashNumber" className="text-base font-medium">bKash Number</Label>
+                <p className="text-sm text-slate-500 mb-2">Primary payout method. Min withdrawal: ৳5.00</p>
+                <Input
+                  id="bkashNumber"
+                  type="tel"
+                  placeholder="01XXXXXXXXX"
+                  value={formData.bkashNumber}
+                  onChange={(e) => {
+                    setFormData({ ...formData, bkashNumber: e.target.value })
+                    setBkashError(null)
+                  }}
+                  className={bkashError ? 'border-red-500' : ''}
+                />
+                {bkashError && <p className="text-sm text-red-600 mt-1">{bkashError}</p>}
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-4 text-sm text-slate-500">or</span>
+              </div>
+            </div>
+
+            {/* Bank */}
+            <div className="flex items-start gap-4 p-4 bg-blue-50/50 rounded-lg">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
+                <Building className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-medium">Bank Account</h4>
+                <p className="text-sm text-slate-500 mb-4">Alternative payout method (Optional)</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="bankName">Bank Name</Label>
                     <Input
-                      id="name"
+                      id="bankName"
                       type="text"
-                      placeholder="Enter your full name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g., Dhaka Bank"
+                      value={formData.bankName}
+                      onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                     />
                   </div>
-
-                  {/* Phone */}
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-slate-400" />
-                      Phone Number
-                    </Label>
+                    <Label htmlFor="bankAccount">Account Number</Label>
                     <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="01XXXXXXXXX"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      id="bankAccount"
+                      type="text"
+                      placeholder="Account number"
+                      value={formData.bankAccount}
+                      onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
                     />
                   </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Label htmlFor="bankRouting">Routing Number</Label>
+                  <Input
+                    id="bankRouting"
+                    type="text"
+                    placeholder="6-digit routing number"
+                    value={formData.bankRouting}
+                    onChange={(e) => setFormData({ ...formData, bankRouting: e.target.value })}
+                    className="max-w-xs"
+                  />
+                </div>
+              </div>
+            </div>
 
-                  <div className="pt-4">
-                    <Button type="submit" disabled={loading} className="gap-2">
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4" />
-                          Save Profile
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
+            {/* Status */}
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+              {hasBankInfo || formData.bkashNumber ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <span className="text-sm text-slate-600">
+                    {hasBankInfo && formData.bkashNumber
+                      ? 'Both bKash and Bank configured'
+                      : hasBankInfo
+                        ? 'Bank details configured'
+                        : 'bKash configured'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-5 h-5 text-amber-600" />
+                  <span className="text-sm text-slate-600">No payout method configured</span>
+                </>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        {/* Payout Tab */}
-        <TabsContent value="payout">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-green-600" />
-                Payout Information
-              </CardTitle>
-              <CardDescription>Where your earnings will be sent</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePayoutMethodsSubmit} className="space-y-6">
-                {/* bKash Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 text-pink-600" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm6 0h-2v-6h2v6zm-3-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">bKash Number</h4>
-                      <p className="text-sm text-slate-500">Primary payout method. Min withdrawal: ৳5.00</p>
-                    </div>
-                  </div>
-                  <div className="pl-13">
-                    <Input
-                      id="bkashNumber"
-                      type="tel"
-                      placeholder="01XXXXXXXXX"
-                      value={formData.bkashNumber}
-                      onChange={(e) => {
-                        setFormData({ ...formData, bkashNumber: e.target.value })
-                        setBkashError(null)
-                      }}
-                      className={bkashError ? 'border-red-500' : ''}
-                    />
-                    {bkashError && (
-                      <p className="text-sm text-red-600 mt-1">{bkashError}</p>
-                    )}
-                  </div>
+            <Button type="submit" disabled={loading} className="gap-2">
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="w-4 h-4" /> Save Payout Methods</>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Security Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-purple-600" />
+            Security
+          </CardTitle>
+          <CardDescription>Manage your passkeys and security settings</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Invoice Settings Link */}
+          <Link href="/dashboard/settings/invoice-settings">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer group">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <FileText className="w-5 h-5 text-blue-600" />
                 </div>
-
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200"></div>
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-white px-4 text-sm text-slate-500">or</span>
-                  </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900">Invoice Settings</h4>
+                  <p className="text-sm text-slate-500">Customize your invoice branding and payment terms</p>
                 </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+            </div>
+          </Link>
 
-                {/* Bank Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Building className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold">Bank Account</h4>
-                      <p className="text-sm text-slate-500">Alternative payout method (Optional)</p>
-                    </div>
-                  </div>
-                  <div className="pl-13 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="bankName">Bank Name</Label>
-                        <Input
-                          id="bankName"
-                          type="text"
-                          placeholder="e.g., Dhaka Bank"
-                          value={formData.bankName}
-                          onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                        />
+          {/* Passkeys */}
+          <div className="p-4 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <Key className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900">Passkeys</h4>
+                  <p className="text-sm text-slate-500">Manage your passkeys for secure passwordless login</p>
+                </div>
+              </div>
+              <Button onClick={() => setShowPasskeyModal(true)} size="sm" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add
+              </Button>
+            </div>
+
+            {passkeysLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : passkeys.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-slate-500 mb-2">No passkeys registered yet</p>
+                <Button onClick={() => setShowPasskeyModal(true)} size="sm" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Your First Passkey
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {passkeys.map((passkey) => (
+                  <div key={passkey.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white rounded-lg">
+                        {getDeviceIcon(passkey.deviceType)}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="bankAccount">Account Number</Label>
-                        <Input
-                          id="bankAccount"
-                          type="text"
-                          placeholder="Account number"
-                          value={formData.bankAccount}
-                          onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                        />
+                      <div>
+                        <p className="font-medium text-slate-900">{passkey.name}</p>
+                        <p className="text-xs text-slate-500">
+                          Added {formatDate(passkey.createdAt)}
+                          {passkey.lastUsedAt && ` • Last used ${formatDate(passkey.lastUsedAt)}`}
+                        </p>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bankRouting">Routing Number</Label>
-                      <Input
-                        id="bankRouting"
-                        type="text"
-                        placeholder="6-digit routing number"
-                        value={formData.bankRouting}
-                        onChange={(e) => setFormData({ ...formData, bankRouting: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Indicator */}
-                <div className="bg-slate-50 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {hasBankInfo ? (
-                      <>
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <span className="text-sm text-slate-600">Bank details configured</span>
-                      </>
-                    ) : formData.bkashNumber ? (
-                      <>
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        <span className="text-sm text-slate-600">bKash configured</span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-5 h-5 text-amber-600" />
-                        <span className="text-sm text-slate-600">No payout method configured</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <Button type="submit" disabled={loading} className="gap-2">
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        Save Payout Methods
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <div className="space-y-6">
-            {/* Invoice Settings */}
-            <Link href="/dashboard/settings/invoice-settings">
-              <Card className="hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-100 rounded-lg">
-                      <FileText className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">Invoice Settings</h3>
-                      <p className="text-sm text-slate-500">Customize your invoice branding and payment terms</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-                </CardContent>
-              </Card>
-            </Link>
-
-            {/* Passkeys Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Key className="w-5 h-5 text-purple-600" />
-                      Passkeys
-                    </CardTitle>
-                    <CardDescription>Manage your passkeys for secure passwordless login</CardDescription>
-                  </div>
-                  <Button
-                    onClick={() => setShowPasskeyModal(true)}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Passkey
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {passkeysLoading ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-16 w-full" />
-                    <Skeleton className="h-16 w-full" />
-                  </div>
-                ) : passkeys.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Key className="w-8 h-8 text-slate-400" />
-                    </div>
-                    <h3 className="font-medium text-slate-900 mb-1">No passkeys yet</h3>
-                    <p className="text-sm text-slate-500 mb-4">
-                      Add a passkey to login without a password using your phone or security key.
-                    </p>
-                    <Button onClick={() => setShowPasskeyModal(true)} className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Add Your First Passkey
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeletePasskey(passkey.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {passkeys.map((passkey) => (
-                      <div
-                        key={passkey.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-slate-100 rounded-lg">
-                            {getDeviceIcon(passkey.deviceType)}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">{passkey.name}</p>
-                            <div className="flex items-center gap-3 text-sm text-slate-500">
-                              <span>Added {formatDate(passkey.createdAt)}</span>
-                              {passkey.lastUsedAt && (
-                                <>
-                                  <span>•</span>
-                                  <span>Last used {formatDate(passkey.lastUsedAt)}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeletePasskey(passkey.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
 
-      {/* Passkey Registration Modal */}
+      {/* Passkey Modal */}
       <Dialog open={showPasskeyModal} onOpenChange={setShowPasskeyModal}>
         <DialogContent>
           <DialogHeader>
@@ -733,37 +663,17 @@ export default function SettingsPage() {
                 value={passkeyName}
                 onChange={(e) => setPasskeyName(e.target.value)}
               />
-              <p className="text-sm text-slate-500">
-                Give your passkey a name to help you remember which device it is
-              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowPasskeyModal(false)
-                setPasskeyName('')
-              }}
-              disabled={registeringPasskey}
-            >
+            <Button variant="outline" onClick={() => { setShowPasskeyModal(false); setPasskeyName('') }} disabled={registeringPasskey}>
               Cancel
             </Button>
-            <Button
-              onClick={handleRegisterPasskey}
-              disabled={registeringPasskey}
-              className="gap-2"
-            >
+            <Button onClick={handleRegisterPasskey} disabled={registeringPasskey} className="gap-2">
               {registeringPasskey ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Preparing...
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Preparing...</>
               ) : (
-                <>
-                  <Key className="w-4 h-4" />
-                  Add Passkey
-                </>
+                <><Key className="w-4 h-4" /> Add Passkey</>
               )}
             </Button>
           </DialogFooter>
