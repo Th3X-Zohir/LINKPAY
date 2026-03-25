@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         payoutStatus = 'PENDING'
         failureReason = payoutResult.error || 'bKash API unavailable - requires manual processing'
       } else {
-        bkashTxnId = payoutResult.trxId
+        bkashTxnId = payoutResult.trxId ?? null
       }
 
       const payout = await db.payout.create({
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
           method: 'BKASH',
           status: payoutStatus,
           bkashTxnId,
-          failureReason
+          failureMsg: payoutStatus === 'FAILED' ? failureReason : null
         }
       })
 

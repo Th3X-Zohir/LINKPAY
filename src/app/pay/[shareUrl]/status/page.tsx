@@ -123,6 +123,7 @@ function SSLCommerzSuccess({ shareUrl, paymentLink, sslTranId }: SSLCommerzSucce
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     async function verifyPayment() {
       try {
         // Call the SSLCommerz verification endpoint - pass tran_id if available
@@ -135,6 +136,8 @@ function SSLCommerzSuccess({ shareUrl, paymentLink, sslTranId }: SSLCommerzSucce
         const data = await response.json()
         console.log('SSLCommerz verification response:', data)
 
+        if (cancelled) return
+
         if (data.success && data.data) {
           setTransaction(data.data)
           setStatus('success')
@@ -146,6 +149,7 @@ function SSLCommerzSuccess({ shareUrl, paymentLink, sslTranId }: SSLCommerzSucce
           setStatus('error')
         }
       } catch (err) {
+        if (cancelled) return
         console.error('SSLCommerz verification error:', err)
         setError('Failed to verify payment')
         setStatus('error')
@@ -154,15 +158,15 @@ function SSLCommerzSuccess({ shareUrl, paymentLink, sslTranId }: SSLCommerzSucce
 
     verifyPayment()
 
-    // Poll for up to 30 seconds
-    const timeout = setTimeout(() => {
-      if (status === 'verifying') {
-        setError('Payment verification timed out')
-        setStatus('error')
-      }
+    const timeoutRef = setTimeout(() => {
+      setError('Payment verification timed out')
+      setStatus('error')
     }, 30000)
 
-    return () => clearTimeout(timeout)
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutRef)
+    }
   }, [shareUrl, sslTranId])
 
   if (status === 'verifying') {
