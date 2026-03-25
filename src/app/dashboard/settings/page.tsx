@@ -110,9 +110,35 @@ export default function SettingsPage() {
         throw new Error(optionsData.error || 'Failed to get registration options')
       }
 
+      const options = optionsData.data
+
+      // Convert base64url challenge to ArrayBuffer
+      const challengeBuffer = Uint8Array.from(atob(options.challenge), c => c.charCodeAt(0))
+
+      // Convert base64url user ID to ArrayBuffer
+      const userIdBuffer = Uint8Array.from(atob(options.user.id), c => c.charCodeAt(0))
+
+      // Convert excludeCredentials if present
+      const excludeCredentials = options.excludeCredentials?.map((cred: { id: string; type: string; transports?: string[] }) => ({
+        ...cred,
+        id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+        transports: cred.transports || undefined
+      })) || []
+
+      // Create public key options with proper ArrayBuffer types
+      const publicKeyOptions = {
+        ...options,
+        challenge: challengeBuffer,
+        user: {
+          ...options.user,
+          id: userIdBuffer
+        },
+        excludeCredentials
+      }
+
       // Create a credential
       const credential = await navigator.credentials.create({
-        publicKey: optionsData.data
+        publicKey: publicKeyOptions
       }) as PublicKeyCredential
 
       if (!credential) {
@@ -136,7 +162,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           credential: credentialJSON,
-          challenge: optionsData.data.challenge,
+          challenge: options.challenge,
           name: passkeyName.trim()
         })
       })

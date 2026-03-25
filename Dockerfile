@@ -39,12 +39,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
-USER nextjs
-
-# Create uploads directory with proper permissions
+# Create uploads directory with proper permissions BEFORE switching to nextjs user
 RUN mkdir -p /app/data/uploads/documents && \
     mkdir -p /app/data/uploads/id-proofs && \
     chown -R nextjs:nodejs /app/data
+
+USER nextjs
 
 EXPOSE 3000
 

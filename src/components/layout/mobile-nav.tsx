@@ -80,8 +80,8 @@ export function MobileNav() {
   return (
     <>
       {/* Desktop Sidebar - shows ALL navigation items */}
-      <aside className="hidden md:block w-64 bg-white border-r min-h-screen sticky top-0">
-        <div className="p-4">
+      <aside className="hidden md:block w-64 bg-white border-r min-h-screen sticky top-0 overflow-y-auto flex flex-col">
+        <div className="p-4 flex-1">
           {/* Main Navigation */}
           <div className="mb-6">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-3">Main Menu</p>
