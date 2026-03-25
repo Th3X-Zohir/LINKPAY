@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Link2, CreditCard, ArrowUpRight, Settings, FileText, AlertCircle, BarChart3, MoreHorizontal, ChevronUp } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { Home, Link2, CreditCard, ArrowUpRight, Settings, FileText, AlertCircle, BarChart3, MoreHorizontal } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 const navItems = [
   { href: '/dashboard', label: 'Home', icon: Home },
