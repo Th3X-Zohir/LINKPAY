@@ -91,13 +91,13 @@ export default function PayoutsPage() {
 
   async function fetchUserSettings() {
     try {
-      const res = await fetch('/api/users/me')
+      const res = await fetch('/api/users/payout-methods')
       const data = await res.json()
       if (data.success) {
         setUserSettings({
-          bkashNumber: data.data?.user?.bkashNumber || null,
-          bankAccount: data.data?.user?.bankAccount || null,
-          bankName: data.data?.user?.bankName || null
+          bkashNumber: data.data?.bkash?.number || null,
+          bankAccount: data.data?.bank?.account || null,
+          bankName: data.data?.bank?.bankName || null
         })
       }
     } catch (err) {
@@ -425,7 +425,7 @@ export default function PayoutsPage() {
                   <p className="text-sm text-red-700">
                     Please configure your bKash or Bank details in Settings before withdrawing.
                   </p>
-                  <Link href="/dashboard/settings" className="text-sm text-blue-600 hover:underline mt-1 block">
+                  <Link href="/settings/invoice-settings" className="text-sm text-blue-600 hover:underline mt-1 block">
                     Go to Settings
                   </Link>
                 </div>
