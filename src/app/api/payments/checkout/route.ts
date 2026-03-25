@@ -61,9 +61,9 @@ export async function POST(): Promise<NextResponse<ApiResponse<{ checkoutUrl: st
       customerName: user.name || 'Customer',
       customerEmail: user.email,
       customerMobile: user.phone || 'N/A', // SSLCommerz requires mobile
-      successUrl: `${appUrl}/dashboard/premium/success?subscription_id=${pendingSubscription.id}`,
-      failUrl: `${appUrl}/dashboard/premium/fail?subscription_id=${pendingSubscription.id}`,
-      cancelUrl: `${appUrl}/dashboard/premium`,
+      successUrl: `${appUrl}/premium/success?subscription_id=${pendingSubscription.id}`,
+      failUrl: `${appUrl}/premium/fail?subscription_id=${pendingSubscription.id}`,
+      cancelUrl: `${appUrl}/premium`,
       tranId: `SUB_${pendingSubscription.id}_${Date.now()}`
     })
 

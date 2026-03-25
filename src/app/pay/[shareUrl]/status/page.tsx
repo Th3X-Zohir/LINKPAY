@@ -1,18 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams, useParams } from 'next/navigation'
 import { formatCurrency } from '@/lib/utils'
-import { CheckCircle, XCircle, Clock, AlertCircle, Loader2, Copy } from 'lucide-react'
+import { CheckCircle, XCircle, AlertCircle, Loader2, Clock } from 'lucide-react'
 import { Suspense } from 'react'
-
-interface TransactionDetails {
-  id: string
-  amount: number
-  aamarPayTxnId: string | null
-  status: string
-  createdAt: string
-}
 
 interface PaymentLinkDetails {
   id: string
@@ -29,18 +21,15 @@ function PaymentStatusContent() {
   const searchParams = useSearchParams()
   const shareUrl = params.shareUrl as string
   const result = searchParams.get('result')
+  const gateway = searchParams.get('gateway')
+
+  // SSLCommerz returns these directly in URL
+  const sslTranId = searchParams.get('TranID')
 
   const [paymentLink, setPaymentLink] = useState<PaymentLinkDetails | null>(null)
-  const [transaction, setTransaction] = useState<TransactionDetails | null>(null)
   const [loading, setLoading] = useState(true)
-  const [timeRemaining, setTimeRemaining] = useState(0)
-
-  // Use ref to track refresh count and prevent infinite loops
-  const refreshCountRef = useRef(0)
-  const MAX_REFRESHES = 10
 
   useEffect(() => {
-    // Fetch payment link details
     async function fetchData() {
       try {
         const response = await fetch(`/api/public/pay/${shareUrl}`)
@@ -54,194 +43,41 @@ function PaymentStatusContent() {
         setLoading(false)
       }
     }
-
     fetchData()
   }, [shareUrl])
 
-  // Auto-refresh when processing - using ref to avoid dependency issues
-  useEffect(() => {
-    if (result === 'success' && !transaction && refreshCountRef.current < MAX_REFRESHES) {
-      const gateway = searchParams.get('gateway')
-
-      const interval = setInterval(async () => {
-        if (refreshCountRef.current >= MAX_REFRESHES) {
-          clearInterval(interval)
-          // After max refreshes, try one more time with direct SSLCommerz verification
-          if (gateway === 'sslcommerz') {
-            try {
-              const tranId = searchParams.get('TranID')
-              const valId = searchParams.get('ValID')
-              if (tranId) {
-                const verifyRes = await fetch('/api/payments/verify-sslcz-transaction', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tran_id: tranId, val_id: valId, shareUrl })
-                })
-                const verifyData = await verifyRes.json()
-                if (verifyData.success && verifyData.data) {
-                  setTransaction(verifyData.data)
-                  setLoading(false)
-                }
-              }
-            } catch (err) {
-              console.error('Final SSLCommerz verification error:', err)
-            }
-          }
-          return
-        }
-
-        try {
-          // For aamarpay, verify the payment with the server
-          if (gateway === 'aamarpay') {
-            const verifyResponse = await fetch(`/api/public/pay/${shareUrl}/verify-aamarpay`, {
-              method: 'POST'
-            })
-            if (verifyResponse.ok) {
-              const verifyData = await verifyResponse.json()
-              if (verifyData.success && verifyData.data) {
-                setTransaction(verifyData.data)
-                setLoading(false)
-                clearInterval(interval)
-                return
-              }
-            }
-          }
-
-          // For sslcommerz, first check if we have the TranID/ValID from return URL
-          if (gateway === 'sslcommerz') {
-            const tranId = searchParams.get('TranID')
-            const valId = searchParams.get('ValID')
-            if (tranId) {
-              // Try to verify directly with SSLCommerz API
-              const verifyRes = await fetch('/api/payments/verify-sslcz-transaction', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tran_id: tranId, val_id: valId, shareUrl })
-              })
-              if (verifyRes.ok) {
-                const verifyData = await verifyRes.json()
-                if (verifyData.success && verifyData.data) {
-                  setTransaction(verifyData.data)
-                  setLoading(false)
-                  clearInterval(interval)
-                  return
-                }
-              }
-            }
-          }
-
-          // For other gateways (sslcommerz without tran_id), poll transaction endpoint
-          const response = await fetch(`/api/public/pay/${shareUrl}/transaction`)
-          if (response.ok) {
-            const data = await response.json()
-            if (data.data) {
-              setTransaction(data.data)
-              setLoading(false)
-              clearInterval(interval)
-            }
-          }
-          refreshCountRef.current += 1
-        } catch (error) {
-          console.error('Error fetching transaction:', error)
-        }
-      }, 2000) // Poll every 2 seconds for faster response
-
-      return () => clearInterval(interval)
-    }
-  }, [result, shareUrl, transaction])
-
-  // Countdown timer for processing status
-  useEffect(() => {
-    if (result === 'success' && !transaction) {
-      setTimeRemaining(30) // 30 seconds max
-      const interval = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            clearInterval(interval)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-
-      return () => clearInterval(interval)
-    }
-  }, [result, transaction])
-  
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Loading payment details...</p>
+          <p className="text-slate-600">Loading...</p>
         </div>
       </div>
     )
   }
-  
-  if (result === 'success') {
-    return <PaymentSuccess paymentLink={paymentLink} transaction={transaction} timeRemaining={timeRemaining} />
+
+  // SSLCommerz success - call verification endpoint to create transaction
+  if (result === 'success' && gateway === 'sslcommerz') {
+    return <SSLCommerzSuccess shareUrl={shareUrl} paymentLink={paymentLink} sslTranId={sslTranId} />
   }
-  
+
+  if (result === 'success') {
+    return <PaymentSuccess paymentLink={paymentLink} />
+  }
+
   if (result === 'failed') {
     return <PaymentFailed paymentLink={paymentLink} shareUrl={shareUrl} />
   }
-  
+
   if (result === 'cancelled') {
     return <PaymentCancelled paymentLink={paymentLink} shareUrl={shareUrl} />
   }
-  
+
   return <UnknownStatus shareUrl={shareUrl} />
 }
 
-function PaymentSuccess({
-  paymentLink,
-  transaction,
-  timeRemaining
-}: {
-  paymentLink: PaymentLinkDetails | null
-  transaction: TransactionDetails | null
-  timeRemaining: number
-}) {
-  const [copied, setCopied] = useState(false)
-  
-  const handleCopyTxnId = () => {
-    if (transaction?.aamarPayTxnId) {
-      navigator.clipboard.writeText(transaction.aamarPayTxnId)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-  
-  if (!transaction && timeRemaining > 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-            </div>
-            
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Processing Payment</h1>
-            
-            <p className="text-slate-600 mb-6">
-              Please wait while we confirm your payment...
-            </p>
-            
-            <div className="bg-slate-50 rounded-xl p-4 mb-6">
-              <p className="text-sm text-slate-500 mb-1">Time remaining</p>
-              <p className="text-2xl font-bold text-slate-700">{timeRemaining}s</p>
-            </div>
-            
-            <p className="text-xs text-slate-400">
-              Do not close this page. It will update automatically.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-  
+function PaymentSuccess({ paymentLink }: { paymentLink: PaymentLinkDetails | null }) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -249,13 +85,12 @@ function PaymentSuccess({
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          
+
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h1>
-          
           <p className="text-slate-600 mb-6">
             Your payment has been processed successfully.
           </p>
-          
+
           {paymentLink && (
             <div className="bg-slate-50 rounded-xl p-4 mb-6">
               <p className="text-sm text-slate-500 mb-1">Amount Paid</p>
@@ -264,39 +99,170 @@ function PaymentSuccess({
               </p>
             </div>
           )}
-          
-          {transaction && (
-            <div className="bg-slate-50 rounded-xl p-4 mb-6">
-              <p className="text-sm text-slate-500 mb-1">Transaction ID</p>
-              <div className="flex items-center justify-center gap-2">
-                <p className="text-lg font-mono text-slate-700">
-                  {transaction.aamarPayTxnId || 'N/A'}
-                </p>
-                {transaction.aamarPayTxnId && (
-                  <button
-                    onClick={handleCopyTxnId}
-                    className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-slate-200 rounded transition-colors"
-                    aria-label="Copy transaction ID to clipboard"
-                  >
-                    <Copy className="w-4 h-4 text-slate-500" />
-                  </button>
-                )}
-              </div>
-              {copied && (
-                <p className="text-xs text-green-600 mt-1">Copied!</p>
-              )}
-            </div>
-          )}
-          
+
           <div className="bg-blue-50 rounded-xl p-4 mb-6">
             <p className="text-sm text-blue-700">
               The freelancer will be notified and will receive the funds shortly.
             </p>
           </div>
-          
-          <p className="text-xs text-slate-400">
-            A confirmation email has been sent to the freelancer.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface SSLCommerzSuccessProps {
+  shareUrl: string
+  paymentLink: PaymentLinkDetails | null
+  sslTranId: string | null
+}
+
+function SSLCommerzSuccess({ shareUrl, paymentLink, sslTranId }: SSLCommerzSuccessProps) {
+  const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying')
+  const [transaction, setTransaction] = useState<{ id: string; amount: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function verifyPayment() {
+      try {
+        // Call the SSLCommerz verification endpoint - pass tran_id if available
+        const response = await fetch('/api/payments/verify-sslcz-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shareUrl, tran_id: sslTranId })
+        })
+
+        const data = await response.json()
+        console.log('SSLCommerz verification response:', data)
+
+        if (data.success && data.data) {
+          setTransaction(data.data)
+          setStatus('success')
+        } else if (data.message === 'No transaction found') {
+          // Poll again after a short delay
+          setTimeout(verifyPayment, 2000)
+        } else {
+          setError(data.error || data.message || 'Verification failed')
+          setStatus('error')
+        }
+      } catch (err) {
+        console.error('SSLCommerz verification error:', err)
+        setError('Failed to verify payment')
+        setStatus('error')
+      }
+    }
+
+    verifyPayment()
+
+    // Poll for up to 30 seconds
+    const timeout = setTimeout(() => {
+      if (status === 'verifying') {
+        setError('Payment verification timed out')
+        setStatus('error')
+      }
+    }, 30000)
+
+    return () => clearTimeout(timeout)
+  }, [shareUrl, sslTranId])
+
+  if (status === 'verifying') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+            </div>
+
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Verifying Payment...</h1>
+            <p className="text-slate-600 mb-6">
+              Please wait while we verify your payment with SSLCommerz.
+            </p>
+
+            {paymentLink && (
+              <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                <p className="text-sm text-slate-500 mb-1">Amount</p>
+                <p className="text-2xl font-bold text-slate-700">
+                  {formatCurrency(paymentLink.amount)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-amber-600" />
+            </div>
+
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Verification Issue</h1>
+            <p className="text-slate-600 mb-4">
+              {error || 'We could not verify your payment immediately.'}
+            </p>
+            <p className="text-sm text-slate-500 mb-6">
+              Your payment may still be processing. The freelancer will receive the funds once confirmed.
+            </p>
+
+            {sslTranId && (
+              <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                <p className="text-sm text-slate-500 mb-1">Transaction ID</p>
+                <p className="text-lg font-mono text-slate-700">{sslTranId}</p>
+              </div>
+            )}
+
+            <div className="bg-blue-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-blue-700">
+                Please save your transaction ID for reference.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Success state
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Payment Successful!</h1>
+          <p className="text-slate-600 mb-6">
+            Your payment has been processed and verified.
           </p>
+
+          {transaction && (
+            <div className="bg-slate-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-slate-500 mb-1">Amount Paid</p>
+              <p className="text-3xl font-bold text-slate-900">
+                {formatCurrency(transaction.amount)}
+              </p>
+            </div>
+          )}
+
+          {sslTranId && (
+            <div className="bg-slate-50 rounded-xl p-4 mb-6">
+              <p className="text-sm text-slate-500 mb-1">Transaction ID</p>
+              <p className="text-lg font-mono text-slate-700">{sslTranId}</p>
+            </div>
+          )}
+
+          <div className="bg-blue-50 rounded-xl p-4 mb-6">
+            <p className="text-sm text-blue-700">
+              The freelancer will be notified and will receive the funds shortly.
+            </p>
+          </div>
         </div>
       </div>
     </div>

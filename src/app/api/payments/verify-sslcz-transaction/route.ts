@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { verifySSLCommerzPayment } from '@/lib/api/sslcommerz'
 import { createAuditLog } from '@/lib/audit'
 
 interface ApiResponse {
@@ -30,7 +29,98 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       || request.headers.get('x-real-ip')
       || 'unknown'
 
-    // First check if we already have this transaction in our DB
+    // If tran_id is provided, try to find payment by it first
+    if (tran_id) {
+      const paymentLinkByTranId = await db.paymentLink.findFirst({
+        where: { aamarPayId: tran_id },
+        include: { user: true }
+      })
+
+      if (paymentLinkByTranId) {
+        // Check for existing transaction
+        const existingTransaction = await db.transaction.findFirst({
+          where: {
+            paymentLinkId: paymentLinkByTranId.id,
+            status: 'SUCCESS'
+          }
+        })
+
+        if (existingTransaction) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              id: existingTransaction.id,
+              amount: existingTransaction.amount,
+              status: existingTransaction.status,
+              aamarPayTxnId: existingTransaction.aamarPayTxnId,
+              createdAt: existingTransaction.createdAt.toISOString()
+            }
+          })
+        }
+
+        // Create transaction for this payment link
+        const amount = paymentLinkByTranId.amount
+        const platformFee = Math.round(amount * 0.0075)
+        const gatewayFee = Math.round(amount * 0.025)
+        const netAmount = amount - platformFee - gatewayFee
+
+        const transaction = await db.$transaction(async (tx) => {
+          await tx.paymentLink.update({
+            where: { id: paymentLinkByTranId.id },
+            data: {
+              status: 'PAID',
+              paidAt: new Date()
+            }
+          })
+
+          return tx.transaction.create({
+            data: {
+              paymentLinkId: paymentLinkByTranId.id,
+              userId: paymentLinkByTranId.userId,
+              amount,
+              platformFee,
+              gatewayFee,
+              netAmount,
+              status: 'SUCCESS',
+              aamarPayTxnId: tran_id,
+              aamarPayFees: JSON.stringify({
+                platform: platformFee,
+                gateway: gatewayFee,
+                sslcommerzValId: val_id
+              })
+            }
+          })
+        })
+
+        await createAuditLog({
+          action: 'TRANSACTION_SUCCESS',
+          userId: paymentLinkByTranId.userId,
+          metadata: {
+            transactionId: transaction.id,
+            paymentLinkId: paymentLinkByTranId.id,
+            amount,
+            netAmount,
+            gateway: 'sslcommerz',
+            gatewayTranId: tran_id
+          },
+          ipAddress: clientIp
+        })
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: transaction.id,
+            amount: transaction.amount,
+            status: transaction.status,
+            aamarPayTxnId: transaction.aamarPayTxnId,
+            createdAt: transaction.createdAt.toISOString()
+          },
+          message: 'Payment verified and completed'
+        })
+      }
+    }
+
+    // If shareUrl is provided, check by shareUrl
     if (shareUrl) {
       const paymentLink = await db.paymentLink.findUnique({
         where: { shareUrl },
@@ -59,20 +149,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           })
         }
 
-        // Check if payment link has a gateway ID (meaning payment was initiated)
+        // If payment link has aamarPayId (payment was initiated), create transaction
         if (paymentLink.aamarPayId) {
-          // SSLCommerz redirected to success - trust the redirect
-          // Only redirect to success after confirmed payment
-          console.log('Trusting SSLCommerz redirect for shareUrl:', shareUrl, 'aamarPayId:', paymentLink.aamarPayId)
-
           const amount = paymentLink.amount
-          // Platform fee: 0.75% (LinkPay BD's fee)
           const platformFee = Math.round(amount * 0.0075)
-          // Gateway fee: 2.5% (SSLCommerz's standard rate)
           const gatewayFee = Math.round(amount * 0.025)
           const netAmount = amount - platformFee - gatewayFee
 
-          // Create transaction
           const transaction = await db.$transaction(async (tx) => {
             await tx.paymentLink.update({
               where: { id: paymentLink.id },
@@ -100,7 +183,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             })
           })
 
-          // Create audit log
           await createAuditLog({
             action: 'TRANSACTION_SUCCESS',
             userId: paymentLink.userId,
@@ -127,20 +209,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             message: 'Payment verified and completed'
           })
         }
-      }
-    }
-
-    // If tran_id provided but no shareUrl match, try to verify with SSLCommerz
-    if (tran_id && val_id) {
-      const verification = await verifySSLCommerzPayment(tran_id, val_id)
-
-      if (verification && verification.status === 'VALID') {
-        // Payment is valid but not in our DB yet - webhook may not have processed
-        return NextResponse.json({
-          success: true,
-          data: null,
-          message: 'Payment verified with gateway but not yet processed'
-        })
       }
     }
 
