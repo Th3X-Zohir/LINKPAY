@@ -69,13 +69,32 @@ export async function generatePasskeyRegistrationOptions(
     // Get existing credentials for this user
     const existingPasskeys = await db.passkey.findMany({
       where: { userId },
-      select: { credentialId: true }
+      select: { credentialId: true, id: true }
     })
 
     const user = await db.user.findUnique({
       where: { id: userId },
       select: { name: true }
     })
+
+    // Safely handle existing credential IDs to exclude from registration
+    const excludeCredentials: Array<{ id: Uint8Array; type: 'public-key' }> = []
+    for (const pk of existingPasskeys) {
+      try {
+        if (!pk.credentialId || pk.credentialId.length === 0) {
+          console.warn('Empty credentialId for passkey:', pk.id)
+          continue
+        }
+        // Convert base64url string to Uint8Array
+        const credentialIdBuffer = Uint8Array.from(atob(pk.credentialId), c => c.charCodeAt(0))
+        excludeCredentials.push({
+          id: credentialIdBuffer,
+          type: 'public-key' as const
+        })
+      } catch (err) {
+        console.warn('Failed to decode credentialId for passkey:', pk.id, err)
+      }
+    }
 
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
@@ -85,10 +104,7 @@ export async function generatePasskeyRegistrationOptions(
       userDisplayName: user?.name || email,
       timeout: TIMEOUT,
       attestationType: 'none',
-      excludeCredentials: existingPasskeys.map(pk => ({
-        id: Buffer.from(pk.credentialId, 'base64url'),
-        type: 'public-key' as const
-      })),
+      excludeCredentials,
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
         userVerification: 'preferred',
@@ -169,14 +185,37 @@ export async function generatePasskeyAuthenticationOptions(
       return { success: false, error: 'No passkeys found for this user' }
     }
 
+    // Validate and decode credential IDs safely
+    const allowCredentials: Array<{ id: Uint8Array; type: 'public-key' }> = []
+    for (const pk of user.passkeys) {
+      try {
+        // The credentialId is stored as base64url string in DB
+        // SimpleWebAuthn expects BufferSource (Uint8Array)
+        if (!pk.credentialId || pk.credentialId.length === 0) {
+          console.warn('Empty credentialId for passkey:', pk.id)
+          continue
+        }
+        // Convert base64url string to Uint8Array
+        const credentialIdBuffer = Uint8Array.from(atob(pk.credentialId), c => c.charCodeAt(0))
+        allowCredentials.push({
+          id: credentialIdBuffer,
+          type: 'public-key' as const
+        })
+      } catch (err) {
+        console.warn('Failed to decode credentialId for passkey:', pk.id, err)
+        continue
+      }
+    }
+
+    if (allowCredentials.length === 0) {
+      return { success: false, error: 'No valid passkeys found for this user' }
+    }
+
     const options = await generateAuthenticationOptions({
       rpID: RP_ID,
       timeout: TIMEOUT,
       userVerification: 'preferred',
-      allowCredentials: user.passkeys.map(pk => ({
-        id: Buffer.from(pk.credentialId, 'base64url'),
-        type: 'public-key' as const
-      }))
+      allowCredentials
     })
 
     // Store the challenge for verification (one-time use)

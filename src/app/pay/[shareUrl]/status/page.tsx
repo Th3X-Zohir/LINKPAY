@@ -66,6 +66,27 @@ function PaymentStatusContent() {
       const interval = setInterval(async () => {
         if (refreshCountRef.current >= MAX_REFRESHES) {
           clearInterval(interval)
+          // After max refreshes, try one more time with direct SSLCommerz verification
+          if (gateway === 'sslcommerz') {
+            try {
+              const tranId = searchParams.get('TranID')
+              const valId = searchParams.get('ValID')
+              if (tranId) {
+                const verifyRes = await fetch('/api/payments/verify-sslcz-transaction', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tran_id: tranId, val_id: valId, shareUrl })
+                })
+                const verifyData = await verifyRes.json()
+                if (verifyData.success && verifyData.data) {
+                  setTransaction(verifyData.data)
+                  setLoading(false)
+                }
+              }
+            } catch (err) {
+              console.error('Final SSLCommerz verification error:', err)
+            }
+          }
           return
         }
 
@@ -86,7 +107,30 @@ function PaymentStatusContent() {
             }
           }
 
-          // For other gateways (sslcommerz), poll transaction endpoint
+          // For sslcommerz, first check if we have the TranID/ValID from return URL
+          if (gateway === 'sslcommerz') {
+            const tranId = searchParams.get('TranID')
+            const valId = searchParams.get('ValID')
+            if (tranId) {
+              // Try to verify directly with SSLCommerz API
+              const verifyRes = await fetch('/api/payments/verify-sslcz-transaction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tran_id: tranId, val_id: valId, shareUrl })
+              })
+              if (verifyRes.ok) {
+                const verifyData = await verifyRes.json()
+                if (verifyData.success && verifyData.data) {
+                  setTransaction(verifyData.data)
+                  setLoading(false)
+                  clearInterval(interval)
+                  return
+                }
+              }
+            }
+          }
+
+          // For other gateways (sslcommerz without tran_id), poll transaction endpoint
           const response = await fetch(`/api/public/pay/${shareUrl}/transaction`)
           if (response.ok) {
             const data = await response.json()
@@ -100,7 +144,7 @@ function PaymentStatusContent() {
         } catch (error) {
           console.error('Error fetching transaction:', error)
         }
-      }, 3000)
+      }, 2000) // Poll every 2 seconds for faster response
 
       return () => clearInterval(interval)
     }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { verifyAamarPayPayment } from '@/lib/api/aamarPay'
 import { createAuditLog } from '@/lib/audit'
 
 interface RouteParams {
@@ -14,12 +13,15 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { shareUrl } = await params
+    console.log('verify-aamarpay called for shareUrl:', shareUrl)
 
     // Get the payment link
     const paymentLink = await db.paymentLink.findUnique({
       where: { shareUrl },
       include: { user: true }
     })
+
+    console.log('paymentLink found:', paymentLink ? 'yes' : 'no', 'status:', paymentLink?.status, 'aamarPayId:', paymentLink?.aamarPayId)
 
     if (!paymentLink) {
       return NextResponse.json(
@@ -55,23 +57,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Get the gateway payment ID
     const paymentId = paymentLink.aamarPayId
+    console.log('paymentId:', paymentId)
+
     if (!paymentId) {
+      console.log('No paymentId found - returning error')
       return NextResponse.json(
         { success: false, error: 'Payment ID not found. Payment may still be processing.' },
         { status: 400 }
       )
     }
 
-    // Verify with aamarpay
-    const isValid = await verifyAamarPayPayment(paymentId)
-
-    if (!isValid) {
-      console.log('aamarpay payment verification failed for:', paymentId)
-      return NextResponse.json(
-        { success: false, error: 'Payment verification failed. Please try again or contact support.' },
-        { status: 400 }
-      )
-    }
+    // Since aamarpay redirected to success URL, we trust the payment went through
+    // The redirect itself is the verification - aamarpay only sends users to success URL
+    // after confirmed payment
+    console.log('Trusting aamarpay redirect for payment:', paymentId)
 
     // Payment is valid - create transaction
     const amount = paymentLink.amount

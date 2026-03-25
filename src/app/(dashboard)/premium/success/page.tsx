@@ -10,17 +10,52 @@ import { CheckCircle, Loader2, ArrowRight } from 'lucide-react'
 export default function PremiumSuccessPage() {
   const searchParams = useSearchParams()
   const subscriptionId = searchParams.get('subscription_id')
+  const sslStatus = searchParams.get('status')
+  const sslTranId = searchParams.get('TranID')
+  const sslValId = searchParams.get('ValID')
   const [verifying, setVerifying] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (subscriptionId) {
-      verifyPayment()
+      // If SSLCommerz returned status=VALID, it means payment was successful
+      // and we can confirm immediately without waiting for webhook
+      if (sslStatus === 'VALID') {
+        confirmSSLCommerzPayment()
+      } else {
+        verifyPayment()
+      }
     } else {
       setError('Invalid subscription')
       setVerifying(false)
     }
-  }, [subscriptionId])
+  }, [subscriptionId, sslStatus])
+
+  async function confirmSSLCommerzPayment() {
+    try {
+      const res = await fetch('/api/payments/confirm-sslcz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription_id: subscriptionId,
+          tran_id: sslTranId,
+          val_id: sslValId,
+          status: sslStatus
+        })
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        // Payment confirmed successfully
+      } else {
+        setError(data.error || 'Payment confirmation failed')
+      }
+    } catch (err) {
+      setError('Failed to confirm payment')
+    } finally {
+      setVerifying(false)
+    }
+  }
 
   async function verifyPayment() {
     try {
