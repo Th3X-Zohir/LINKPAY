@@ -109,7 +109,8 @@ export async function generatePasskeyRegistrationOptions(
 export async function verifyPasskeyRegistration(
   userId: string,
   credential: RegistrationResponseJSON,
-  expectedChallenge: string
+  expectedChallenge: string,
+  name?: string
 ): Promise<{ success: true; passkey: PasskeyCredential } | { success: false; error: string }> {
   try {
     const verification = await verifyRegistrationResponse({
@@ -130,6 +131,7 @@ export async function verifyPasskeyRegistration(
     const passkey = await db.passkey.create({
       data: {
         userId,
+        name: name || null,
         credentialId: Buffer.from(credentialID).toString('base64url'),
         publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
         counter,

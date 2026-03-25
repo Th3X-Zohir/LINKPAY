@@ -9,8 +9,17 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from 'next-auth/react'
-import { User, Wallet, Building, Save, Loader2, FileText, ArrowRight } from 'lucide-react'
+import { User, Wallet, Building, Save, Loader2, FileText, ArrowRight, Key, Trash2, Smartphone, Monitor } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
+
+interface Passkey {
+  id: string
+  name: string
+  deviceType: string | null
+  createdAt: string
+  lastUsedAt: string | null
+}
 
 export default function SettingsPage() {
   const sessionResult = useSession()
@@ -23,6 +32,11 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [bkashError, setBkashError] = useState('')
+  const [passkeys, setPasskeys] = useState<Passkey[]>([])
+  const [passkeysLoading, setPasskeysLoading] = useState(true)
+  const [registeringPasskey, setRegisteringPasskey] = useState(false)
+  const [passkeyName, setPasskeyName] = useState('')
+  const [showPasskeyModal, setShowPasskeyModal] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -60,6 +74,128 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchProfile()
   }, [fetchProfile])
+
+  const fetchPasskeys = useCallback(async () => {
+    setPasskeysLoading(true)
+    try {
+      const res = await fetch('/api/users/passkeys')
+      const data = await res.json()
+      if (data.success) {
+        setPasskeys(data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch passkeys:', err)
+    } finally {
+      setPasskeysLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchPasskeys()
+  }, [fetchPasskeys])
+
+  const handleRegisterPasskey = async () => {
+    if (!passkeyName.trim()) {
+      toast.error('Please enter a name for this passkey')
+      return
+    }
+
+    setRegisteringPasskey(true)
+    try {
+      // Get registration options
+      const optionsRes = await fetch('/api/auth/passkey/register-options')
+      const optionsData = await optionsRes.json()
+
+      if (!optionsData.success) {
+        throw new Error(optionsData.error || 'Failed to get registration options')
+      }
+
+      // Create a credential
+      const credential = await navigator.credentials.create({
+        publicKey: optionsData.data
+      }) as PublicKeyCredential
+
+      if (!credential) {
+        throw new Error('Failed to create credential')
+      }
+
+      // Convert credential to JSON for API
+      const credentialJSON = {
+        id: credential.id,
+        rawId: Buffer.from(credential.rawId).toString('base64url'),
+        type: credential.type,
+        response: {
+          attestationObject: Buffer.from((credential.response as AuthenticatorAttestationResponse).attestationObject).toString('base64url'),
+          clientDataJSON: Buffer.from((credential.response as AuthenticatorAttestationResponse).clientDataJSON).toString('base64url')
+        }
+      }
+
+      // Verify registration with the server
+      const verifyRes = await fetch('/api/auth/passkey/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credential: credentialJSON,
+          challenge: optionsData.data.challenge,
+          name: passkeyName.trim()
+        })
+      })
+
+      const verifyData = await verifyRes.json()
+
+      if (!verifyData.success) {
+        throw new Error(verifyData.error || 'Failed to verify passkey')
+      }
+
+      toast.success('Passkey registered successfully!')
+      setShowPasskeyModal(false)
+      setPasskeyName('')
+      fetchPasskeys()
+    } catch (err) {
+      console.error('Passkey registration error:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to register passkey')
+    } finally {
+      setRegisteringPasskey(false)
+    }
+  }
+
+  const handleDeletePasskey = async (passkeyId: string) => {
+    if (!confirm('Are you sure you want to delete this passkey? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/users/passkeys?id=${passkeyId}`, {
+        method: 'DELETE'
+      })
+
+      const data = await res.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to delete passkey')
+      }
+
+      toast.success('Passkey deleted successfully')
+      fetchPasskeys()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete passkey')
+    }
+  }
+
+  const getDeviceIcon = (deviceType: string | null) => {
+    if (deviceType === 'singleDevice') {
+      return <Smartphone className="w-5 h-5 text-blue-600" />
+    }
+    return <Monitor className="w-5 h-5 text-slate-600" />
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
 
   const handlePayoutMethodsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -316,6 +452,139 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </Link>
+
+      {/* Passkeys Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              <CardTitle>Passkeys</CardTitle>
+            </div>
+            <Button
+              onClick={() => setShowPasskeyModal(true)}
+              size="sm"
+              className="gap-2"
+            >
+              <Key className="w-4 h-4" />
+              Add Passkey
+            </Button>
+          </div>
+          <CardDescription>Manage your passkeys for secure passwordless login</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {passkeysLoading ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : passkeys.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Key className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="font-medium text-slate-900 mb-1">No passkeys yet</h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Add a passkey to login without a password using your phone or security key.
+              </p>
+              <Button onClick={() => setShowPasskeyModal(true)} className="gap-2">
+                <Key className="w-4 h-4" />
+                Add Your First Passkey
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {passkeys.map((passkey) => (
+                <div
+                  key={passkey.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-100 rounded-lg">
+                      {getDeviceIcon(passkey.deviceType)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">{passkey.name}</p>
+                      <p className="text-sm text-slate-500">
+                        Added {formatDate(passkey.createdAt)}
+                        {passkey.lastUsedAt && ` · Last used ${formatDate(passkey.lastUsedAt)}`}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeletePasskey(passkey.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Passkey Registration Modal */}
+      {showPasskeyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Add Passkey</CardTitle>
+              <CardDescription>
+                Enter a name to identify this passkey device
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="passkeyName">Passkey Name</Label>
+                <Input
+                  id="passkeyName"
+                  placeholder="e.g., iPhone 15, MacBook Pro"
+                  value={passkeyName}
+                  onChange={(e) => setPasskeyName(e.target.value)}
+                />
+                <p className="text-sm text-slate-500">
+                  Give your passkey a name to help you remember which device it is
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowPasskeyModal(false)
+                    setPasskeyName('')
+                  }}
+                  className="flex-1"
+                  disabled={registeringPasskey}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRegisterPasskey}
+                  className="flex-1 gap-2"
+                  disabled={registeringPasskey}
+                >
+                  {registeringPasskey ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Preparing...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="w-4 h-4" />
+                      Add Passkey
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={handleSubmit} disabled={payoutLoading || profileLoading} className="gap-2">

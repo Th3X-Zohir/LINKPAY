@@ -61,6 +61,8 @@ function PaymentStatusContent() {
   // Auto-refresh when processing - using ref to avoid dependency issues
   useEffect(() => {
     if (result === 'success' && !transaction && refreshCountRef.current < MAX_REFRESHES) {
+      const gateway = searchParams.get('gateway')
+
       const interval = setInterval(async () => {
         if (refreshCountRef.current >= MAX_REFRESHES) {
           clearInterval(interval)
@@ -68,6 +70,23 @@ function PaymentStatusContent() {
         }
 
         try {
+          // For aamarpay, verify the payment with the server
+          if (gateway === 'aamarpay') {
+            const verifyResponse = await fetch(`/api/public/pay/${shareUrl}/verify-aamarpay`, {
+              method: 'POST'
+            })
+            if (verifyResponse.ok) {
+              const verifyData = await verifyResponse.json()
+              if (verifyData.success && verifyData.data) {
+                setTransaction(verifyData.data)
+                setLoading(false)
+                clearInterval(interval)
+                return
+              }
+            }
+          }
+
+          // For other gateways (sslcommerz), poll transaction endpoint
           const response = await fetch(`/api/public/pay/${shareUrl}/transaction`)
           if (response.ok) {
             const data = await response.json()

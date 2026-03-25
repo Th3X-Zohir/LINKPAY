@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { createAamarPayPayment } from '@/lib/api/aamarPay'
+import { createSSLCommerzPayment } from '@/lib/api/sslcommerz'
 
 interface ApiResponse<T> {
   success: boolean
@@ -24,7 +24,7 @@ export async function POST(): Promise<NextResponse<ApiResponse<{ checkoutUrl: st
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, email: true, name: true, plan: true }
+      select: { id: true, email: true, name: true, plan: true, phone: true }
     })
 
     if (!user) {
@@ -54,32 +54,33 @@ export async function POST(): Promise<NextResponse<ApiResponse<{ checkoutUrl: st
       }
     })
 
-    // Create aamarPay payment for premium subscription
-    const paymentResult = await createAamarPayPayment({
+    // Create SSLCommerz payment for premium subscription
+    const paymentResult = await createSSLCommerzPayment({
       amount: PREMIUM_PRICE_TAKA,
       description: 'LinkPay BD Premium Subscription - Monthly',
       customerName: user.name || 'Customer',
       customerEmail: user.email,
-      customerMobile: '', // Not required for subscription
+      customerMobile: user.phone || 'N/A', // SSLCommerz requires mobile
       successUrl: `${appUrl}/dashboard/premium/success?subscription_id=${pendingSubscription.id}`,
       failUrl: `${appUrl}/dashboard/premium/fail?subscription_id=${pendingSubscription.id}`,
-      cancelUrl: `${appUrl}/dashboard/premium`
+      cancelUrl: `${appUrl}/dashboard/premium`,
+      tranId: `SUB_${pendingSubscription.id}_${Date.now()}`
     })
 
-    if (paymentResult.status !== 'success' || !paymentResult.payment_id || !paymentResult.payment_url) {
+    if (paymentResult.status !== 'success' || !paymentResult.paymentUrl) {
       // Clean up pending subscription on failure
       await db.pendingSubscription.delete({ where: { id: pendingSubscription.id } })
-      
+
       return NextResponse.json(
         { success: false, error: paymentResult.error || 'Failed to create checkout' },
         { status: 500 }
       )
     }
 
-    // Update pending subscription with payment ID
+    // Update pending subscription with SSLCommerz transaction ID
     await db.pendingSubscription.update({
       where: { id: pendingSubscription.id },
-      data: { aamarPayId: paymentResult.payment_id }
+      data: { aamarPayId: paymentResult.tranId }
     })
 
     // Create audit log
@@ -90,8 +91,9 @@ export async function POST(): Promise<NextResponse<ApiResponse<{ checkoutUrl: st
         details: {
           action: 'PREMIUM_CHECKOUT_INITIATED',
           subscriptionId: pendingSubscription.id,
-          paymentId: paymentResult.payment_id,
-          amount: PREMIUM_PRICE_TAKA
+          paymentId: paymentResult.tranId,
+          amount: PREMIUM_PRICE_TAKA,
+          gateway: 'sslcommerz'
         }
       }
     })
@@ -99,8 +101,8 @@ export async function POST(): Promise<NextResponse<ApiResponse<{ checkoutUrl: st
     return NextResponse.json({
       success: true,
       data: {
-        checkoutUrl: paymentResult.payment_url,
-        paymentId: paymentResult.payment_id
+        checkoutUrl: paymentResult.paymentUrl,
+        paymentId: paymentResult.tranId || ''
       },
       message: 'Checkout created successfully'
     })

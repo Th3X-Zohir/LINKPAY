@@ -41,6 +41,11 @@ COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 
+# Create uploads directory with proper permissions
+RUN mkdir -p /app/data/uploads/documents && \
+    mkdir -p /app/data/uploads/id-proofs && \
+    chown -R nextjs:nodejs /app/data
+
 EXPOSE 3000
 
 ENV PORT=3000

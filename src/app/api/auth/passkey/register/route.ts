@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { credential, challenge } = body
+    const { credential, challenge, name } = body
 
     if (!credential || !challenge) {
       return NextResponse.json(
@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
     const result = await verifyPasskeyRegistration(
       session.user.id,
       credential,
-      challenge
+      challenge,
+      name
     )
 
     if (!result.success) {

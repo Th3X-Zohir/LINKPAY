@@ -29,7 +29,8 @@ export async function createAamarPayPayment(request: AamarPayPaymentRequest): Pr
   try {
     // Validate credentials
     if (!STORE_ID || !SIGNATURE_KEY || !API_KEY) {
-      return { status: 'fail', error: 'Payment gateway not configured' }
+      console.error('aamarPay credentials missing:', { store_id: !!STORE_ID, signature_key: !!SIGNATURE_KEY, api_key: !!API_KEY })
+      return { status: 'fail', error: 'Payment gateway credentials are not configured. Please contact support.' }
     }
 
     const payload = {
@@ -47,7 +48,10 @@ export async function createAamarPayPayment(request: AamarPayPaymentRequest): Pr
       cancel_url: request.cancelUrl
     }
 
-    const response = await fetch(`${AAMARPAY_URL}/api/v1/trxbot/request`, {
+    const endpoint = `${AAMARPAY_URL}/api/v1/trxbot/request`
+    console.log('aamarPay request to:', endpoint, 'with payload:', JSON.stringify({ ...payload, signature_key: '***', api_key: '***' }))
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -56,10 +60,11 @@ export async function createAamarPayPayment(request: AamarPayPaymentRequest): Pr
     })
 
     const text = await response.text()
+    console.log('aamarPay response status:', response.status, 'body:', text.substring(0, 300))
 
     // Check if response is HTML (indicates gateway error or 404)
     if (text.trim().startsWith('<') || !text.includes('{')) {
-      console.error('aamarPay gateway error:', text.substring(0, 200))
+      console.error('aamarPay gateway error (HTML response):', text.substring(0, 200))
       return {
         status: 'fail',
         error: `Payment gateway is currently unavailable. Please try again later or contact support. (Error: ${response.status})`

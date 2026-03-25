@@ -69,7 +69,61 @@ export async function POST(request: NextRequest) {
     try {
       // Handle different statuses
       if (status === 'VALID') {
-        // Successful payment
+        // Check if this is a subscription payment (tran_id starts with SUB_)
+        if (tran_id.startsWith('SUB_')) {
+          // Handle subscription payment
+          const pendingSubscription = await db.pendingSubscription.findFirst({
+            where: { aamarPayId: tran_id },
+            include: { user: true }
+          })
+
+          if (!pendingSubscription) {
+            console.log('Pending subscription not found for tran_id:', tran_id)
+            return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+          }
+
+          // Update subscription to completed
+          await db.pendingSubscription.update({
+            where: { id: pendingSubscription.id },
+            data: {
+              status: 'COMPLETED',
+              activatedAt: new Date()
+            }
+          })
+
+          // Update user to premium
+          await db.user.update({
+            where: { id: pendingSubscription.userId },
+            data: { plan: 'PREMIUM' }
+          })
+
+          // Create audit log
+          await createAuditLog({
+            action: 'USER_UPDATED',
+            userId: pendingSubscription.userId,
+            metadata: {
+              action: 'PREMIUM_ACTIVATED_VIA_WEBHOOK',
+              subscriptionId: pendingSubscription.id,
+              sslcommerzTranId: tran_id,
+              sslcommerzValId: val_id,
+              amount: pendingSubscription.amount
+            },
+            ipAddress: clientIp
+          })
+
+          // Mark webhook event as processed
+          await db.webhookEvent.update({
+            where: { eventId: tran_id },
+            data: {
+              processed: true,
+              processedAt: new Date()
+            }
+          })
+
+          return NextResponse.json({ message: 'Subscription activated successfully' })
+        }
+
+        // Handle regular payment link payment
         // Look up by aamarPayId which stores the SSLCommerz tran_id
         const paymentLink = await db.paymentLink.findFirst({
           where: {
