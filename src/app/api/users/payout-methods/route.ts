@@ -90,100 +90,96 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
+    const updateData: Record<string, unknown> = {}
+    const responseData: Record<string, unknown> = {}
 
-    // Validate bKash update
-    if ('bkashNumber' in body) {
-      const parsed = bkashSchema.safeParse(body)
-      if (!parsed.success) {
+    // Validate and prepare bKash update if provided
+    if (body.bkashNumber !== undefined) {
+      const bkashResult = bkashSchema.safeParse(body)
+      if (!bkashResult.success) {
         return NextResponse.json(
-          { success: false, error: parsed.error.errors[0].message },
+          { success: false, error: bkashResult.error.errors[0].message },
           { status: 400 }
         )
       }
+      updateData.bkashNumber = bkashResult.data.bkashNumber
+      updateData.bkashVerified = false
+      responseData.bkash = {
+        number: bkashResult.data.bkashNumber, // Return unmasked for form editing
+        verified: false
+      }
+    }
 
-      await db.user.update({
-        where: { id: session.user.id },
-        data: {
-          bkashNumber: parsed.data.bkashNumber, // Store decrypted for lookup
-          bkashVerified: false // Reset verification when changed
-        }
-      })
+    // Validate and prepare bank update if provided
+    if (body.bankAccount !== undefined) {
+      const bankResult = bankSchema.safeParse(body)
+      if (!bankResult.success) {
+        return NextResponse.json(
+          { success: false, error: bankResult.error.errors[0].message },
+          { status: 400 }
+        )
+      }
+      updateData.bankAccount = bankResult.data.bankAccount
+      updateData.bankName = bankResult.data.bankName
+      updateData.bankRouting = bankResult.data.bankRouting || null
+      updateData.bankVerified = false
+      responseData.bank = {
+        account: bankResult.data.bankAccount, // Return unmasked for form editing
+        bankName: bankResult.data.bankName,
+        routing: bankResult.data.bankRouting,
+        verified: false
+      }
+    }
 
+    // If no valid fields to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
+
+    // Update user in database
+    await db.user.update({
+      where: { id: session.user.id },
+      data: updateData
+    })
+
+    // Create audit logs
+    if (body.bkashNumber !== undefined) {
       await createAuditLog({
         action: 'USER_UPDATED',
         userId: session.user.id,
         metadata: {
           method: 'payout-method',
           type: 'bkash_updated',
-          last3: parsed.data.bkashNumber.slice(-3)
+          last3: body.bkashNumber.slice(-3)
         },
         ipAddress: clientIp,
         userAgent,
       })
-
-      return NextResponse.json({
-        success: true,
-        message: 'bKash number updated successfully',
-        data: {
-          bkash: {
-            number: '01XXXXXXXXX' + parsed.data.bkashNumber.slice(-3),
-            verified: false
-          }
-        }
-      })
     }
 
-    // Validate bank update
-    if ('bankAccount' in body) {
-      const parsed = bankSchema.safeParse(body)
-      if (!parsed.success) {
-        return NextResponse.json(
-          { success: false, error: parsed.error.errors[0].message },
-          { status: 400 }
-        )
-      }
-
-      await db.user.update({
-        where: { id: session.user.id },
-        data: {
-          bankAccount: parsed.data.bankAccount, // Store decrypted for lookup
-          bankName: parsed.data.bankName,
-          bankRouting: parsed.data.bankRouting || null,
-          bankVerified: false // Reset verification when changed
-        }
-      })
-
+    if (body.bankAccount !== undefined) {
       await createAuditLog({
         action: 'USER_UPDATED',
         userId: session.user.id,
         metadata: {
           method: 'payout-method',
           type: 'bank_updated',
-          bankName: parsed.data.bankName,
-          last4: parsed.data.bankAccount.slice(-4)
+          bankName: body.bankName,
+          last4: body.bankAccount.slice(-4)
         },
         ipAddress: clientIp,
         userAgent,
       })
-
-      return NextResponse.json({
-        success: true,
-        message: 'Bank details updated successfully',
-        data: {
-          bank: {
-            account: '****' + parsed.data.bankAccount.slice(-4),
-            bankName: parsed.data.bankName,
-            routing: parsed.data.bankRouting,
-            verified: false
-          }
-        }
-      })
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Invalid update payload' },
-      { status: 400 }
-    )
+    return NextResponse.json({
+      success: true,
+      message: 'Payout methods updated successfully',
+      data: responseData
+    })
   } catch (error) {
     console.error('Error updating payout methods:', error)
     return NextResponse.json(

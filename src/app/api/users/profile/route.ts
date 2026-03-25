@@ -83,7 +83,7 @@ export async function GET() {
         businessName: user.businessName || '',
         businessAddress: user.businessAddress || '',
         bkashNumber: user.bkashNumber || '',
-        bankAccount: user.bankAccount ? '****' + user.bankAccount.slice(-4) : '', // Masked
+        bankAccount: user.bankAccount || '', // Unmasked for form editing
         bankName: user.bankName || '',
         bankRouting: user.bankRouting || '',
         bkashVerified: user.bkashVerified || false,

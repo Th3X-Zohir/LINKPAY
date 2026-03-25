@@ -112,11 +112,17 @@ export async function POST(request: NextRequest) {
       const reference = `LP-${Date.now().toString(36)}`
       const payoutResult = await initiateBkashPayout(amount / 100, user.bkashNumber, reference)
 
+      // Determine payout status based on bKash API result
+      let payoutStatus: 'PROCESSING' | 'PENDING' = 'PROCESSING'
+      let bkashTxnId: string | null = null
+      let failureReason: string | null = null
+
       if (payoutResult.status !== 'success') {
-        return NextResponse.json(
-          { error: payoutResult.error || 'Failed to initiate bKash payout' },
-          { status: 500 }
-        )
+        // bKash API failed - create pending payout for manual admin processing
+        payoutStatus = 'PENDING'
+        failureReason = payoutResult.error || 'bKash API unavailable - requires manual processing'
+      } else {
+        bkashTxnId = payoutResult.trxId
       }
 
       const payout = await db.payout.create({
@@ -124,8 +130,9 @@ export async function POST(request: NextRequest) {
           userId: session.user.id,
           amount,
           method: 'BKASH',
-          status: 'PROCESSING',
-          bkashTxnId: payoutResult.trxId
+          status: payoutStatus,
+          bkashTxnId,
+          failureReason
         }
       })
 
@@ -168,19 +175,24 @@ export async function POST(request: NextRequest) {
           payoutId: payout.id,
           amount,
           method: 'BKASH',
-          bkashTxnId: payoutResult.trxId,
+          bkashTxnId: bkashTxnId,
+          status: payoutStatus,
         },
         ipAddress: clientIp,
         userAgent,
       })
+
+      const message = payoutStatus === 'PENDING'
+        ? 'Withdrawal request submitted for manual processing. You will be notified once processed.'
+        : 'Payout initiated successfully'
 
       return NextResponse.json({
         success: true,
         data: {
           id: payout.id,
           status: payout.status,
-          trxId: payoutResult.trxId,
-          message: 'Payout initiated successfully'
+          trxId: bkashTxnId,
+          message
         }
       })
     }
