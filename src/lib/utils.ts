@@ -88,3 +88,12 @@ export function formatBDT(amount: number): string {
 export function formatBDTRaw(amount: number): string {
   return `৳${(amount / 100).toLocaleString('bn-BD')}`
 }
+
+export function isValidAmount(amount: number): boolean {
+  return amount >= 100 && amount <= 10000000
+}
+
+export function parseAmount(value: string): number {
+  const cleaned = value.replace(/[^\d]/g, '')
+  return parseInt(cleaned, 10) * 100
+}
