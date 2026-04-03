@@ -40,3 +40,18 @@ export const PAYOUT_METHODS = {
   BKASH: 'bKash',
   BANK: 'Bank Transfer',
 } as const
+
+export const BANK_LIST = {
+  DBBL: 'Dutch-Bangla Bank',
+  BRAC: 'BRAC Bank',
+  CITY: 'City Bank',
+  EBL: 'Eastern Bank',
+  HSBC: 'HSBC',
+  STANDARD_CHARTERED: 'Standard Chartered',
+  TRUST_BANK: 'Trust Bank',
+  ISLAMI_BANK: 'Islami Bank',
+  DUTCH_BANGLA: 'Dutch-Bangla Bank',
+  BANK_ASIA: 'Bank Asia',
+  MIDLAND_BANK: 'Midland Bank',
+  NRB_BANK: 'NRB Bank',
+} as const
