@@ -427,6 +427,11 @@ export default function LandingPage() {
 
             {/* Desktop CTAs */}
             <div className="hidden md:flex items-center gap-3">
+              <Link href="/demo">
+                <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                  Demo
+                </Button>
+              </Link>
               <Link href="/login">
                 <Button variant="ghost" size="sm" className="text-slate-600">
                   Login
