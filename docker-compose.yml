@@ -4,12 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9100:3000"
+      - "9200:3000"
     environment:
       - DATABASE_URL=postgresql://linkpay:linkpay_secret@postgres:5432/linkpay
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-linkpay-dev-secret-change-in-production-12345}
-      - NEXTAUTH_URL=http://localhost:9100
+      - NEXTAUTH_URL=http://localhost:9200
       - AUTH_TRUST_HOST=true
       - AAMARPAY_STORE_ID=${AAMARPAY_STORE_ID:-aamarpay-store-id}
       - AAMARPAY_KEY=${AAMARPAY_KEY:-aamarpay-api-key}
@@ -21,7 +21,7 @@ services:
       - BKASH_APP_SECRET=${BKASH_APP_SECRET:-your_bkash_app_secret}
       - BKASH_URL=${BKASH_URL:-https://tokenized.sandbox.bka.sh/v1.2.0-beta}
       - RESEND_API_KEY=${RESEND_API_KEY:-re_your_resend_api_key}
-      - NEXT_PUBLIC_APP_URL=http://localhost:9100
+      - NEXT_PUBLIC_APP_URL=http://localhost:9200
       - ADMIN_EMAILS=admin@linkpay.com,zohirrayhanweb@gmail.com,admin@linkpaybd.com
       - SSLCOMMERZ_STORE_ID=${SSLCOMMERZ_STORE_ID:-neege6997413bb22cd}
       - SSLCOMMERZ_STORE_PASSWORD=${SSLCOMMERZ_STORE_PASSWORD:-neege6997413bb22cd@ssl}
@@ -45,7 +45,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "9101:5432"
+      - "9201:5432"
     restart: unless-stopped
     networks:
       - linkpay-network
@@ -58,7 +58,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "9102:6379"
+      - "9202:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -73,8 +73,8 @@ services:
   minio:
     image: minio/minio:latest
     ports:
-      - "9103:9000"
-      - "9104:9001"
+      - "9203:9000"
+      - "9204:9001"
     environment:
       - MINIO_ROOT_USER=linkpay
       - MINIO_ROOT_PASSWORD=linkpay_secret
