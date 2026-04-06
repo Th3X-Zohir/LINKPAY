@@ -33,6 +33,9 @@ export const PAYOUT_STATUS_LABELS: Record<PayoutStatus, string> = {
   PROCESSING: 'Processing',
   COMPLETED: 'Completed',
   FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
 }
 
 export const PAYOUT_STATUS_COLORS: Record<PayoutStatus, string> = {
@@ -40,6 +43,9 @@ export const PAYOUT_STATUS_COLORS: Record<PayoutStatus, string> = {
   PROCESSING: 'bg-blue-100 text-blue-800',
   COMPLETED: 'bg-green-100 text-green-800',
   FAILED: 'bg-red-100 text-red-800',
+  CANCELLED: 'bg-gray-100 text-gray-800',
+  APPROVED: 'bg-emerald-100 text-emerald-800',
+  REJECTED: 'bg-orange-100 text-orange-800',
 }
 
 export const DISPUTE_STATUS_LABELS: Record<DisputeStatus, string> = {
