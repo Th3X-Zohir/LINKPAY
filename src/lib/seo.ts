@@ -12,7 +12,7 @@ export function generateMetaTags(config: SEOConfig): Record<string, string> {
   return {
     title: config.title,
     description: config.description,
-    keywords: config.keywords?.join(', '),
+    keywords: config.keywords?.join(', ') || '',
     'og:title': config.title,
     'og:description': config.description,
     'og:image': config.image || `${baseUrl}/og-image.png`,
