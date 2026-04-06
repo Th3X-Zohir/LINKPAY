@@ -20,6 +20,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 RUN npx prisma generate
+ENV RESEND_API_KEY=re_build_placeholder
+ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+ENV NEXTAUTH_SECRET=build-placeholder-secret
+ENV NEXTAUTH_URL=http://localhost:3000
 RUN npm run build
 
 # Production image
