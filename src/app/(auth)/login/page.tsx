@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [roleLoginLoading, setRoleLoginLoading] = useState<'admin' | 'freelancer' | null>(null)
   const [error, setError] = useState('')
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('password')
   const [otpSent, setOtpSent] = useState(false)
@@ -51,6 +52,36 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRoleQuickLogin = async (role: 'admin' | 'freelancer') => {
+    setError('')
+    setRoleLoginLoading(role)
+
+    const credentials =
+      role === 'admin'
+        ? { email: 'admin@linkpaybd.com', password: 'admin123', callbackUrl: '/admin' }
+        : { email: 'demo@linkpaybd.com', password: 'demo123', callbackUrl: '/dashboard' }
+
+    try {
+      const result = await signIn('credentials', {
+        email: credentials.email,
+        password: credentials.password,
+        redirect: false,
+        callbackUrl: credentials.callbackUrl,
+      })
+
+      if (!result || result.error) {
+        throw new Error('Quick login failed. Make sure seed initialization has completed.')
+      }
+
+      router.push(result.url || credentials.callbackUrl)
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Quick login failed')
+    } finally {
+      setRoleLoginLoading(null)
     }
   }
 
@@ -245,6 +276,47 @@ export default function LoginPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Role quick login</p>
+                <p className="mt-1 text-xs text-slate-600">Use seeded demo accounts for instant access.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-200 text-blue-700 hover:bg-blue-100"
+                    onClick={() => handleRoleQuickLogin('admin')}
+                    disabled={roleLoginLoading !== null}
+                  >
+                    {roleLoginLoading === 'admin' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Admin...
+                      </>
+                    ) : (
+                      'Login as Admin'
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                    onClick={() => handleRoleQuickLogin('freelancer')}
+                    disabled={roleLoginLoading !== null}
+                  >
+                    {roleLoginLoading === 'freelancer' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Freelancer...
+                      </>
+                    ) : (
+                      'Login as Freelancer'
+                    )}
+                  </Button>
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-700 font-medium">Email</Label>

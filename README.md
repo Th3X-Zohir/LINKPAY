@@ -80,7 +80,7 @@ npx prisma db push
 npm run dev
 ```
 
-5. **Open [http://localhost:3000](http://localhost:3000)**
+5. **Open [http://localhost:9100](http://localhost:9100)**
 
 ### Docker Deployment
 
@@ -93,6 +93,18 @@ docker-compose logs -f app
 
 # Stop
 docker-compose down
+
+### Docker Exposed Ports (9100 range)
+
+- App: `9100 -> 3000`
+- PostgreSQL: `9101 -> 5432`
+- Redis: `9102 -> 6379`
+- MinIO API: `9103 -> 9000`
+- MinIO Console: `9104 -> 9001`
+
+The app container runs startup initialization automatically:
+- `prisma db push` to ensure schema is applied
+- first-run seed only (skips seeding when users already exist)
 ```
 
 ## Project Structure
@@ -172,7 +184,7 @@ docker build -t linkpay-bd .
 # Run with environment
 docker run -d \
   --name linkpay \
-  -p 3000:3000 \
+  -p 9100:3000 \
   -e DATABASE_URL=... \
   -e NEXTAUTH_SECRET=... \
   linkpay-bd

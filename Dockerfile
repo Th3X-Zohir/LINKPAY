@@ -38,10 +38,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy bcryptjs and other needed modules for seeding
 COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
+
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+COPY prisma/seed-initial.js ./prisma/seed-initial.js
 
 # Create uploads directory with proper permissions BEFORE switching to nextjs user
 RUN mkdir -p /app/data/uploads/documents && \
     mkdir -p /app/data/uploads/id-proofs && \
+    chmod +x /app/docker-entrypoint.sh && \
     chown -R nextjs:nodejs /app/data
 
 USER nextjs
@@ -51,4 +56,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["./docker-entrypoint.sh"]
